@@ -44,10 +44,6 @@ contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
     minimumListFee = _fee;
   }
 
-  function getTokenForgeCounts(uint256 tokenId) public view returns (uint256) {
-    return forgingCounts[tokenId];
-  }
-
   function fetchListings() external view returns (Listing[] memory _listings) {
     _listings = new Listing[](listingCount);
     for (uint256 i = 0; i < listingCount; i++) {
