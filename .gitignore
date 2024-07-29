@@ -21,8 +21,6 @@ yarn-error.log*
 .env
 .env*.local
 
-typechain
-typechain-types
 
 # Hardhat files
 cache
