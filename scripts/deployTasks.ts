@@ -176,18 +176,23 @@ task('deploy-dev-fund', 'Deploy DevFund').setAction(async (_, hre) => {
   return null;
 });
 
-task('deploy-airdrop', 'Deploy Airdrop').setAction(async (_, hre) => {
-  try {
-    console.log('Deploying Airdrop...');
-    const airdrop = await hre.ethers.deployContract('Airdrop', []);
-    await airdrop.waitForDeployment();
-    console.log('Contract deployed to:', await airdrop.getAddress());
-    return airdrop;
-  } catch (error) {
-    console.error(error);
-  }
-  return null;
-});
+task('deploy-airdrop', 'Deploy Airdrop')
+  .addParam('nft', 'The address of TraitForgeNft')
+  .setAction(async (taskArguments, hre) => {
+    try {
+      console.log('Deploying Airdrop...');
+      const airdrop = await hre.ethers.deployContract('Airdrop', [
+        taskArguments.nft,
+      ]);
+      await airdrop.waitForDeployment();
+      console.log('Contract deployed to:', airdrop.getAddress());
+      return airdrop;
+    } catch (error) {
+      console.error(error);
+    }
+    return null;
+  });
+
 
 task('deploy-dao-fund', 'Deploy DAOFund')
   .addParam('token', 'The address of Trait token')
