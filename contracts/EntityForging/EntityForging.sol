@@ -168,14 +168,15 @@ contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
       mergerTokenId,
       ''
     );
+
+    // Cancel listed forger nft
+    _cancelListingForForging(forgerTokenId);
+
     forgedPairs[lowerId][higherId] = true;
     (bool success, ) = nukeFundAddress.call{ value: devShare }('');
     require(success, 'Failed to send to NukeFund');
     (bool success_forge, ) = forgerOwner.call{ value: forgerShare }('');
     require(success_forge, 'Failed to send to Forge Owner');
-
-    // Cancel listed forger nft
-    _cancelListingForForging(forgerTokenId);
 
     uint256 newEntropy = nftContract.getTokenEntropy(newTokenId);
 

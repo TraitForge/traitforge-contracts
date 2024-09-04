@@ -51,13 +51,12 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
   function addReferralInfo(address referrer, uint256 mints) external onlyOwner {
    require(!started, 'Already started');
     referralInfo[referrer] += mints;
-    totalReferredMints += amount;
+    totalReferredMints += mints;
   }
 
   // Function to update the allowed caller, restricted to the owner of the contract
   function setAllowedCaller(address _allowedCaller) external onlyOwner {
     allowedCaller = _allowedCaller;
-    emit AllowedCallerUpdated(_allowedCaller); // Emit an event for this update.
   }
 
   // function to get the current allowed caller
@@ -70,10 +69,11 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
   ) external whenNotPaused nonReentrant onlyOwner {
     require(!started, 'Already started');
     require(amount > 0, 'Invalid amount');
-    traitToken.transferFrom(tx.origin, address(this), amount);
+    require(traitToken.allowance(msg.sender, address(this)) >= amount, "ERC20: insufficient allowance");
+    traitToken.transferFrom(msg.sender, address(this), amount);
     started = true;
     totalTokenAmount = amount;
-    distrubuteTokens(amount);
+    distributeTokens(amount);
   }
 
   function airdropStarted() external view returns (bool) {
@@ -132,6 +132,7 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
 
   function claim() external whenNotPaused nonReentrant {
     require(started, 'Not started');
+    require(totalValue > 0, 'No tokens to claim');
     require(userInfo[msg.sender] > 0, 'Not eligible');
 
     uint256 amount = (tokensToClaim * userInfo[msg.sender]) / totalValue;
@@ -141,6 +142,7 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
 
   function claimAsReferrer() external whenNotPaused nonReentrant {
     require(started, 'Not started');
+    require(tokensToClaimAsReferrer > 0, 'No tokens to claim');
     require(referralInfo[msg.sender] > 0, 'Not eligible');
 
     uint256 amount = (tokensToClaimAsReferrer * referralInfo[msg.sender]) / totalReferredMints;
