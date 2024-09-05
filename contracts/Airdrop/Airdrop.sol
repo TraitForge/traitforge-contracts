@@ -38,8 +38,11 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
     //     _setTraitToken(_traitToken);
     // }
 
-    /********************* external & public functions ********************************/ 
+    /**
+     * external & public functions *******************************
+     */
 
+    //////////////////////////// write functions ////////////////////////////
     function setTraitToken(address _traitToken) external onlyOwner {
         _setTraitToken(_traitToken);
     }
@@ -89,6 +92,7 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
         _unpause();
     }
 
+    //////////////////////////// read functions ////////////////////////////
     function airdropStarted() external view returns (bool) {
         return started;
     }
@@ -97,8 +101,9 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
         return daoAllowed;
     }
 
-    /******************************************* internal & private ********************************************/
-     
+    /**
+     * internal & private *******************************************
+     */
     function _setTraitToken(address _traitToken) private {
         if (_traitToken == address(0)) revert Airdrop__AddressZero();
         traitToken = IERC20(_traitToken);

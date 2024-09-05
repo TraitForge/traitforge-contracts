@@ -29,6 +29,13 @@ contract AirdropTest is Test {
         trait.approve(address(airdrop), amount);
     }
 
+    function _startAirdrop() internal {
+        _transferAndApproveTrait();
+        airdrop.setTraitToken(address(trait));
+        airdrop.startAirdrop(amount);
+        vm.stopPrank();
+    }
+
     // function test_Increment() public {
     //     counter.increment();
     //     assertEq(counter.number(), 1);
