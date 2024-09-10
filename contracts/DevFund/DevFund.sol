@@ -7,9 +7,15 @@ import '@openzeppelin/contracts/security/Pausable.sol';
 import './IDevFund.sol';
 
 contract DevFund is IDevFund, Ownable, ReentrancyGuard, Pausable {
+  // State variables
   uint256 public totalDevWeight;
   uint256 public totalRewardDebt;
   mapping(address => DevInfo) public devInfo;
+
+  // Errors
+  error DevFund__InvalidWeight();
+  error DevFund__AlreadyRegistered();
+  error DevFund__NotRegistered();
 
   receive() external payable {
     if (totalDevWeight > 0) {
@@ -37,8 +43,8 @@ contract DevFund is IDevFund, Ownable, ReentrancyGuard, Pausable {
 
   function addDev(address user, uint256 weight) external onlyOwner {
     DevInfo storage info = devInfo[user];
-    require(weight > 0, 'Invalid weight');
-    require(info.weight == 0, 'Already registered');
+    if(weight == 0) revert DevFund__InvalidWeight();
+    if(info.weight != 0) revert DevFund__AlreadyRegistered();
     info.rewardDebt = totalRewardDebt;
     info.weight = weight;
     totalDevWeight += weight;
@@ -47,8 +53,8 @@ contract DevFund is IDevFund, Ownable, ReentrancyGuard, Pausable {
 
   function updateDev(address user, uint256 weight) external onlyOwner {
     DevInfo storage info = devInfo[user];
-    require(weight > 0, 'Invalid weight');
-    require(info.weight > 0, 'Not dev address');
+    if(weight == 0) revert DevFund__InvalidWeight();
+    if(info.weight == 0) revert DevFund__NotRegistered();
     totalDevWeight = totalDevWeight - info.weight + weight;
     info.pendingRewards += (totalRewardDebt - info.rewardDebt) * info.weight;
     info.rewardDebt = totalRewardDebt;
@@ -58,7 +64,7 @@ contract DevFund is IDevFund, Ownable, ReentrancyGuard, Pausable {
 
   function removeDev(address user) external onlyOwner {
     DevInfo storage info = devInfo[user];
-    require(info.weight > 0, 'Not dev address');
+    if(info.weight == 0) revert DevFund__NotRegistered();
     totalDevWeight -= info.weight;
     info.pendingRewards += (totalRewardDebt - info.rewardDebt) * info.weight;
     info.rewardDebt = totalRewardDebt;

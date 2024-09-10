@@ -6,7 +6,6 @@ import {Trait} from "contracts/Trait/Trait.sol";
 
 contract DeployTrait is Script {
     Trait public trait;
-    address minter = makeAddr("minter");
 
     function run() public returns (Trait) {
         vm.startBroadcast();
