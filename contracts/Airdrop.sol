@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "./IAirdrop.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {IAirdrop} from "contracts/interfaces/IAirdrop.sol";
 
 contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
     //   Type declarations
@@ -53,7 +53,7 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
         if (address(traitToken) == address(0)) revert Airdrop__AddressZero();
         started = true;
         totalTokenAmount = amount;
-        traitToken.transferFrom(tx.origin, address(this), amount); // Why tx.origin and not msg.sender?
+        traitToken.transferFrom(msg.sender, address(this), amount);
     }
 
     function allowDaoFund() external onlyOwner {

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import '@openzeppelin/contracts/security/Pausable.sol';
-import './IDevFund.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import {Pausable} from '@openzeppelin/contracts/security/Pausable.sol';
+import {IDevFund} from './interfaces/IDevFund.sol';
 
 contract DevFund is IDevFund, Ownable, ReentrancyGuard, Pausable {
   // State variables

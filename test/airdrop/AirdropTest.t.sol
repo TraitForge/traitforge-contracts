@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Airdrop} from "contracts/Airdrop/Airdrop.sol";
-import {Trait} from "contracts/Trait/Trait.sol";
+import {Airdrop} from "contracts/Airdrop.sol";
+import {Trait} from "contracts/Trait.sol";
 import {DeployAirdrop} from "script/airdrop/DeployAirdrop.s.sol";
 import {DeployTrait} from "script/trait/DeployTrait.s.sol";
 

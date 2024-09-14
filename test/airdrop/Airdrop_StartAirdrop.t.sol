@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {AirdropTest} from "test/airdrop/AirdropTest.t.sol";
-import {Airdrop} from "contracts/Airdrop/Airdrop.sol";
+import {Airdrop} from "contracts/Airdrop.sol";
 
 contract Airdrop_StartAirdrop is AirdropTest {
     function testRevert_when_not_owner() public {

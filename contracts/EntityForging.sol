@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "./IEntityForging.sol";
-import "../TraitForgeNft/ITraitForgeNft.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {ITraitForgeNft} from "./interfaces/ITraitForgeNft.sol";
+import {IEntityForging} from "./interfaces/IEntityForging.sol";
 
 contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
     ITraitForgeNft public nftContract;

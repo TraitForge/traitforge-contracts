@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {DevFund} from "contracts/DevFund/DevFund.sol";
+import {DevFund} from "contracts/DevFund.sol";
 
 contract DevFundTest is Test {
     event AddDev(address indexed dev, uint256 weight);

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {DevFund} from "contracts/DevFund/DevFund.sol";
+import {DevFund} from "contracts/DevFund.sol";
 
 contract DeployDevFund is Script {
     DevFund public devFund;

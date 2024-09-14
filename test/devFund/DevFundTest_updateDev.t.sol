@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {DevFundTest} from "./DevFundTest.t.sol";
-import {DevFund} from "contracts/DevFund/DevFund.sol";
+import {DevFund} from "contracts/DevFund.sol";
 
 contract DevFundTest_updateDev is DevFundTest {
     address user = makeAddr("user");
@@ -37,7 +37,7 @@ contract DevFundTest_updateDev is DevFundTest {
         vm.expectEmit(address(devFund));
         emit UpdateDev(user, weight);
         devFund.updateDev(user, weight);
-        
+
         (uint256 devWeight, uint256 devRewardDebt, uint256 pendingRewards) = devFund.devInfo(user);
         assertEq(devFund.totalRewardDebt(), devRewardDebt);
         assertEq(pendingRewards, pendingRewardsBf + ((devFund.totalRewardDebt() - devRewardDebtBf) * devWeightBf));

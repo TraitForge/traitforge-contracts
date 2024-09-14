@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {Airdrop} from "contracts/Airdrop/Airdrop.sol";
+import {Airdrop} from "contracts/Airdrop.sol";
 
 contract DeployAirdrop is Script {
     Airdrop public airdrop;

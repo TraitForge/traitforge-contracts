@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "./ITraitForgeNft.sol";
-import "../EntityForging/IEntityForging.sol";
-import "../EntropyGenerator/IEntropyGenerator.sol";
-import "../Airdrop/IAirdrop.sol";
+import {ERC721, ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {ITraitForgeNft} from "./interfaces/ITraitForgeNft.sol";
+import {IEntityForging} from "./interfaces/IEntityForging.sol";
+import {IEntropyGenerator} from "./interfaces/IEntropyGenerator.sol";
+import {IAirdrop} from "./interfaces/IAirdrop.sol";
 
 contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Ownable, Pausable {
     // Constants for token generation and pricing

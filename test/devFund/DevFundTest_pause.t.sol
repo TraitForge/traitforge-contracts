@@ -18,7 +18,4 @@ contract DevFundTest_pause is DevFundTest {
         devFund.pause();
         assertEq(devFund.paused(), true);
     }
-
-
-
 }

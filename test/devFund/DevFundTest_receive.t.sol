@@ -15,7 +15,7 @@ contract DevFundTest_receive is DevFundTest {
         vm.expectEmit(address(devFund));
         emit FundReceived(user, amount);
         vm.prank(user);
-        (bool success, ) = payable(address(devFund)).call{ value: amount }('');
+        (bool success,) = payable(address(devFund)).call{value: amount}("");
         assert(success);
         assert(owner.balance == ownerBalanceBefore + amount);
     }
@@ -31,7 +31,7 @@ contract DevFundTest_receive is DevFundTest {
         vm.expectEmit(address(devFund));
         emit FundReceived(user, amount);
         vm.prank(user);
-        (bool success, ) = payable(address(devFund)).call{ value: amount }('');
+        (bool success,) = payable(address(devFund)).call{value: amount}("");
 
         uint256 amountDevFundShouldReceive = amount / weight * devFund.totalDevWeight();
         uint256 amountOwnerShouldReceive = amount - amountDevFundShouldReceive;
@@ -40,7 +40,4 @@ contract DevFundTest_receive is DevFundTest {
         assert(owner.balance == ownerBalanceBefore + amountOwnerShouldReceive);
         assert(devFund.totalRewardDebt() == amount / devFund.totalDevWeight());
     }
-
-
-
 }

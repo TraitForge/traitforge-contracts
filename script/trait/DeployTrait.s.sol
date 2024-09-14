@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {Trait} from "contracts/Trait/Trait.sol";
+import {Trait} from "contracts/Trait.sol";
 
 contract DeployTrait is Script {
     Trait public trait;

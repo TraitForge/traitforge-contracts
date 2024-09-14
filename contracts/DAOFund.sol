@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import './IUniswapV2Router.sol';
-import '../Trait/ITrait.sol';
+import { ITrait } from './interfaces/ITrait.sol';
+import { IUniswapV2Router01, IUniswapV2Router02 } from './interfaces/IUniswapV2Router.sol';
 
 contract DAOFund {
+  //   Type declarations
+
+    // Events
+
+    // Modifiers
+
+    // State variables
   ITrait public token;
   IUniswapV2Router01 public uniswapV2Router;
 

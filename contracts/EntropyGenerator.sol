@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/security/Pausable.sol';
-import './IEntropyGenerator.sol';
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {IEntropyGenerator} from "./interfaces/IEntropyGenerator.sol";
 
 // EntropyGenerator is a contract designed to generate pseudo-random values for use in other contracts
 contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
@@ -22,8 +22,8 @@ contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
 
     // Modifier to restrict certain functions to the allowed caller
     modifier onlyAllowedCaller() {
-      require(msg.sender == allowedCaller, 'Caller is not allowed');
-      _;
+        require(msg.sender == allowedCaller, "Caller is not allowed");
+        _;
     }
 
     constructor(address _traitForgeNft) {
@@ -31,24 +31,23 @@ contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
         writeEntropyBatch();
     }
 
-      // Function to update the allowed caller, restricted to the owner of the contract
-     function setAllowedCaller(address _allowedCaller) external onlyOwner {
-       allowedCaller = _allowedCaller;
-       emit AllowedCallerUpdated(_allowedCaller); // Emit an event for this update.
+    // Function to update the allowed caller, restricted to the owner of the contract
+    function setAllowedCaller(address _allowedCaller) external onlyOwner {
+        allowedCaller = _allowedCaller;
+        emit AllowedCallerUpdated(_allowedCaller); // Emit an event for this update.
     }
 
     // function to get the current allowed caller
     function getAllowedCaller() external view returns (address) {
-      return allowedCaller;
+        return allowedCaller;
     }
 
     // Functions to initialize entropy values in batches to spread gas cost over multiple transactions
     function writeEntropyBatch() public onlyOwner {
         uint256 endIndex = 833; // We want to initialize all 770 slots
         for (uint256 i = lastInitializedIndex; i < endIndex; i++) {
-            uint256 pseudoRandomValue = uint256(
-                keccak256(abi.encodePacked(block.number, block.timestamp, i))
-            ) % uint256(10) ** 77; // generate a pseudo-random value using block number and index
+            uint256 pseudoRandomValue =
+                uint256(keccak256(abi.encodePacked(block.number, block.timestamp, i))) % uint256(10) ** 77; // generate a pseudo-random value using block number and index
             entropySlots[i] = pseudoRandomValue; // store the value in the slots array
         }
         lastInitializedIndex = endIndex; // Update the index to indicate initialization is complete
@@ -56,7 +55,7 @@ contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
 
     // Function to retrieve the next entropy value, accessible only by the owner
     function getNextEntropy() public onlyAllowedCaller returns (uint256) {
-        require(currentSlotIndex < maxSlotIndex, 'Max slot index reached.');
+        require(currentSlotIndex < maxSlotIndex, "Max slot index reached.");
         uint256 entropy;
         do {
             entropy = getEntropy(currentSlotIndex, currentNumberIndex);
@@ -76,10 +75,7 @@ contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
     }
 
     // Public function to expose entropy calculation for a given slot and number index
-    function getPublicEntropy(
-        uint256 slotIndex,
-        uint256 numberIndex
-    ) public view returns (uint256) {
+    function getPublicEntropy(uint256 slotIndex, uint256 numberIndex) public view returns (uint256) {
         return getEntropy(slotIndex, numberIndex);
     }
 
@@ -94,21 +90,15 @@ contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
     }
 
     // Private function to calculate the entropy value based on slot and number index
-    function getEntropy(
-        uint256 slotIndex,
-        uint256 numberIndex
-    ) private view returns (uint256) {
-        require(slotIndex < maxSlotIndex, 'Slot index out of bounds.');
+    function getEntropy(uint256 slotIndex, uint256 numberIndex) private view returns (uint256) {
+        require(slotIndex < maxSlotIndex, "Slot index out of bounds.");
 
-        if (
-            slotIndex == slotIndexSelectionPoint &&
-            numberIndex == numberIndexSelectionPoint
-        ) {
+        if (slotIndex == slotIndexSelectionPoint && numberIndex == numberIndexSelectionPoint) {
             return 999999;
         }
 
         uint256 position = numberIndex * 6; // Calculate the position for slicing the entropy value
-        require(position <= 66, 'Position calculation error');
+        require(position <= 66, "Position calculation error");
 
         uint256 slotValue = entropySlots[slotIndex]; // Slice the required part of the entropy value
         uint256 entropy = (slotValue / (10 ** (66 - position))) % 1000000; // Adjust the entropy value based on the number of digits
@@ -129,9 +119,7 @@ contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
 
     // Select index points for 999999, triggered each generation increment
     function initializeAlphaIndices() public onlyAllowedCaller {
-        uint256 hashValue = uint256(
-            keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp))
-        );
+        uint256 hashValue = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp)));
 
         uint256 slotIndexSelection = (hashValue % 258) + 612;
         uint256 numberIndexSelection = hashValue % 12;
@@ -141,11 +129,11 @@ contract EntropyGenerator is IEntropyGenerator, Pausable, Ownable {
     }
 
     function getInbredEntropy() public view returns (uint256) {
-    uint256 entropy = 1; // Start with 1 to ensure the first digit is 1
-    for (uint256 i = 0; i < 5; i++) {
-        uint256 bit = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, i))) % 3;
-        entropy = entropy * 10 + bit;
-    }
-    return entropy;
+        uint256 entropy = 1; // Start with 1 to ensure the first digit is 1
+        for (uint256 i = 0; i < 5; i++) {
+            uint256 bit = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, i))) % 3;
+            entropy = entropy * 10 + bit;
+        }
+        return entropy;
     }
 }
