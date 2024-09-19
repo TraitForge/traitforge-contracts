@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {IAirdrop} from "contracts/interfaces/IAirdrop.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
+import { IAirdrop } from "contracts/interfaces/IAirdrop.sol";
+import { IAddressProvider } from "contracts/interfaces/IAddressProvider.sol";
+import { Roles } from "contracts/libraries/Roles.sol";
+import { Errors } from "contracts/libraries/Errors.sol";
+import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.sol";
 
-contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
-    //   Type declarations
+contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable {
+    // Type declarations
 
     // Events
 
@@ -18,7 +21,6 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
     bool private started;
     bool private daoAllowed;
 
-    IERC20 public traitToken;
     uint256 public totalTokenAmount;
     uint256 public totalValue;
 
@@ -34,41 +36,36 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
 
     // Functions
 
-    // constructor(address _traitToken) {
-    //     _setTraitToken(_traitToken);
-    // }
+    constructor(address addressProvider) AddressProviderResolver(addressProvider) { }
 
     /**
      * external & public functions *******************************
      */
 
     //////////////////////////// write functions ////////////////////////////
-    function setTraitToken(address _traitToken) external onlyOwner {
-        _setTraitToken(_traitToken);
-    }
 
-    function startAirdrop(uint256 amount) external whenNotPaused nonReentrant onlyOwner {
+    function startAirdrop(uint256 amount) external whenNotPaused nonReentrant onlyAirdropAccessor {
         if (started) revert Airdrop__AlreadyStarted();
         if (amount == 0) revert Airdrop__InvalidAmount();
-        if (address(traitToken) == address(0)) revert Airdrop__AddressZero();
+        if (address(_getTraitToken()) == address(0)) revert Airdrop__AddressZero();
         started = true;
         totalTokenAmount = amount;
-        traitToken.transferFrom(msg.sender, address(this), amount);
+        _getTraitToken().transferFrom(msg.sender, address(this), amount);
     }
 
-    function allowDaoFund() external onlyOwner {
+    function allowDaoFund() external onlyAirdropAccessor {
         if (!started) revert Airdrop__NotStarted();
         if (daoAllowed) revert Airdrop__AlreadyAllowed();
         daoAllowed = true;
     }
 
-    function addUserAmount(address user, uint256 amount) external whenNotPaused nonReentrant onlyOwner {
+    function addUserAmount(address user, uint256 amount) external whenNotPaused nonReentrant onlyAirdropAccessor {
         if (!started) revert Airdrop__NotStarted();
         userInfo[user] += amount;
         totalValue += amount;
     }
 
-    function subUserAmount(address user, uint256 amount) external whenNotPaused nonReentrant onlyOwner {
+    function subUserAmount(address user, uint256 amount) external whenNotPaused nonReentrant onlyAirdropAccessor {
         if (!started) revert Airdrop__NotStarted();
         if (userInfo[user] < amount) revert Airdrop__InvalidAmount();
         userInfo[user] -= amount;
@@ -80,15 +77,15 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
         if (userInfo[msg.sender] <= 0) revert Airdrop__NotEligible();
 
         uint256 amount = (totalTokenAmount * userInfo[msg.sender]) / totalValue;
-        traitToken.transfer(msg.sender, amount);
+        _getTraitToken().transfer(msg.sender, amount);
         userInfo[msg.sender] = 0;
     }
 
-    function pause() public onlyOwner {
+    function pause() public onlyProtocolMaintainer {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyProtocolMaintainer {
         _unpause();
     }
 
@@ -104,8 +101,7 @@ contract Airdrop is IAirdrop, Ownable, ReentrancyGuard, Pausable {
     /**
      * internal & private *******************************************
      */
-    function _setTraitToken(address _traitToken) private {
-        if (_traitToken == address(0)) revert Airdrop__AddressZero();
-        traitToken = IERC20(_traitToken);
+    function _getTraitToken() private view returns (IERC20) {
+        return IERC20(_addressProvider.getTrait());
     }
 }

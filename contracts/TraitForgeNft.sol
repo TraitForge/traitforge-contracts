@@ -1,27 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC721, ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {ITraitForgeNft} from "./interfaces/ITraitForgeNft.sol";
-import {IEntityForging} from "./interfaces/IEntityForging.sol";
-import {IEntropyGenerator} from "./interfaces/IEntropyGenerator.sol";
-import {IAirdrop} from "./interfaces/IAirdrop.sol";
+import { ERC721, ERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { ITraitForgeNft } from "contracts/interfaces/ITraitForgeNft.sol";
+import { IEntityForging } from "contracts/interfaces/IEntityForging.sol";
+import { IEntropyGenerator } from "contracts/interfaces/IEntropyGenerator.sol";
+import { IAirdrop } from "contracts/interfaces/IAirdrop.sol";
+import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.sol";
 
-contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Ownable, Pausable {
+contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumerable, ReentrancyGuard, Pausable {
     // Constants for token generation and pricing
-    uint256 public maxTokensPerGen = 10000;
+    uint256 public maxTokensPerGen = 10_000;
     uint256 public startPrice = 0.005 ether;
     uint256 public priceIncrement = 0.0000245 ether;
     uint256 public priceIncrementByGen = 0.000005 ether;
-
-    IEntityForging public entityForgingContract;
-    IEntropyGenerator public entropyGenerator;
-    IAirdrop public airdropContract;
-    address public nukeFundAddress;
 
     // Variables for managing generations and token IDs
     uint256 public currentGeneration = 1;
@@ -50,69 +45,44 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
         _;
     }
 
-    constructor() ERC721("TraitForgeNft", "TFGNFT") {
+    constructor(address addressProvider) ERC721("TraitForgeNft", "TFGNFT") AddressProviderResolver(addressProvider) {
         whitelistEndTime = block.timestamp + 24 hours;
     }
 
-    function pause() public onlyOwner {
+    function pause() public onlyProtocolMaintainer {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyProtocolMaintainer {
         _unpause();
     }
 
-    // Function to set the nuke fund contract address, restricted to the owner
-    function setNukeFundContract(address payable _nukeFundAddress) external onlyOwner {
-        nukeFundAddress = _nukeFundAddress;
-        emit NukeFundContractUpdated(_nukeFundAddress); // Consider adding an event for this.
+    function startAirdrop(uint256 amount) external whenNotPaused onlyProtocolMaintainer {
+        _getAirdrop().startAirdrop(amount);
     }
 
-    // Function to set the entity merging (breeding) contract address, restricted to the owner
-    function setEntityForgingContract(address entityForgingAddress_) external onlyOwner {
-        require(entityForgingAddress_ != address(0), "Invalid address");
-
-        entityForgingContract = IEntityForging(entityForgingAddress_);
-    }
-
-    function setEntropyGenerator(address entropyGeneratorAddress_) external onlyOwner {
-        require(entropyGeneratorAddress_ != address(0), "Invalid address");
-
-        entropyGenerator = IEntropyGenerator(entropyGeneratorAddress_);
-    }
-
-    function setAirdropContract(address airdrop_) external onlyOwner {
-        require(airdrop_ != address(0), "Invalid address");
-
-        airdropContract = IAirdrop(airdrop_);
-    }
-
-    function startAirdrop(uint256 amount) external whenNotPaused onlyOwner {
-        airdropContract.startAirdrop(amount);
-    }
-
-    function setStartPrice(uint256 _startPrice) external onlyOwner {
+    function setStartPrice(uint256 _startPrice) external onlyProtocolMaintainer {
         startPrice = _startPrice;
     }
 
-    function setPriceIncrement(uint256 _priceIncrement) external onlyOwner {
+    function setPriceIncrement(uint256 _priceIncrement) external onlyProtocolMaintainer {
         priceIncrement = _priceIncrement;
     }
 
-    function setPriceIncrementByGen(uint256 _priceIncrementByGen) external onlyOwner {
+    function setPriceIncrementByGen(uint256 _priceIncrementByGen) external onlyProtocolMaintainer {
         priceIncrementByGen = _priceIncrementByGen;
     }
 
-    function setMaxGeneration(uint256 maxGeneration_) external onlyOwner {
+    function setMaxGeneration(uint256 maxGeneration_) external onlyProtocolMaintainer {
         require(maxGeneration_ >= currentGeneration, "can't below than current generation");
         maxGeneration = maxGeneration_;
     }
 
-    function setRootHash(bytes32 rootHash_) external onlyOwner {
+    function setRootHash(bytes32 rootHash_) external onlyProtocolMaintainer {
         rootHash = rootHash_;
     }
 
-    function setWhitelistEndTime(uint256 endTime_) external onlyOwner {
+    function setWhitelistEndTime(uint256 endTime_) external onlyProtocolMaintainer {
         whitelistEndTime = endTime_;
     }
 
@@ -126,6 +96,7 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
 
     function burn(uint256 tokenId) external whenNotPaused nonReentrant {
         require(isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
+        IAirdrop airdropContract = _getAirdrop();
         if (!airdropContract.airdropStarted()) {
             uint256 entropy = getTokenEntropy(tokenId);
             if (msg.sender == initialOwners[tokenId]) {
@@ -135,13 +106,18 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
         _burn(tokenId);
     }
 
-    function forge(address newOwner, uint256 parent1Id, uint256 parent2Id, string memory)
+    function forge(
+        address newOwner,
+        uint256 parent1Id,
+        uint256 parent2Id,
+        string memory
+    )
         external
         whenNotPaused
         nonReentrant
         returns (uint256)
     {
-        require(msg.sender == address(entityForgingContract), "unauthorized caller");
+        require(msg.sender == address(_getEntityForging()), "unauthorized caller");
         uint256 newGeneration = getTokenGeneration(parent1Id) + 1;
 
         /// Check new generation is not over maxGeneration
@@ -177,7 +153,7 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
 
         uint256 excessPayment = msg.value - mintPrice;
         if (excessPayment > 0) {
-            (bool refundSuccess,) = msg.sender.call{value: excessPayment}("");
+            (bool refundSuccess,) = msg.sender.call{ value: excessPayment }("");
             require(refundSuccess, "Refund of excess payment failed.");
         }
     }
@@ -207,7 +183,7 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
             mintPrice = calculateMintPrice();
         }
         if (budgetLeft > 0) {
-            (bool refundSuccess,) = msg.sender.call{value: budgetLeft}("");
+            (bool refundSuccess,) = msg.sender.call{ value: budgetLeft }("");
             require(refundSuccess, "Refund failed.");
         }
     }
@@ -228,7 +204,10 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
         return tokenGenerations[tokenId];
     }
 
-    function getEntropiesForTokens(uint256 forgerTokenId, uint256 mergerTokenId)
+    function getEntropiesForTokens(
+        uint256 forgerTokenId,
+        uint256 mergerTokenId
+    )
         public
         view
         returns (uint256 forgerEntropy, uint256 mergerEntropy)
@@ -257,19 +236,21 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
         _tokenIds++;
         uint256 newItemId = _tokenIds;
         _mint(to, newItemId);
-        uint256 entropyValue = entropyGenerator.getNextEntropy();
+        IEntropyGenerator entropyGenerator = _getEntropyGenerator();
+        uint256 entropyValue = entropyGenerator.nextEntropy();
         tokenCreationTimestamps[newItemId] = block.timestamp;
-        while (entropyValue == 999999 && hasGoldenGodbeenMinted) {
-            entropyValue = entropyGenerator.getNextEntropy();
+        while (entropyValue == 999_999 && hasGoldenGodbeenMinted) {
+            entropyValue = entropyGenerator.nextEntropy();
         }
         tokenEntropy[newItemId] = entropyValue;
-        if (entropyValue == 999999) {
+        if (entropyValue == 999_999) {
             hasGoldenGodbeenMinted = true;
         }
         tokenGenerations[newItemId] = currentGeneration;
         generationMintCounts[currentGeneration]++;
         initialOwners[newItemId] = to;
 
+        IAirdrop airdropContract = _getAirdrop();
         if (!airdropContract.airdropStarted()) {
             airdropContract.addUserAmount(to, entropyValue);
         }
@@ -296,6 +277,7 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
             _incrementGeneration();
         }
 
+        IAirdrop airdropContract = _getAirdrop();
         if (!airdropContract.airdropStarted()) {
             airdropContract.addUserAmount(newOwner, entropy);
         }
@@ -311,6 +293,7 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
         require(currentGeneration <= maxGeneration, "Maximum generation reached");
         hasGoldenGodbeenMinted = false;
         priceIncrement = priceIncrement + priceIncrementByGen;
+        IEntropyGenerator entropyGenerator = _getEntropyGenerator();
         entropyGenerator.initializeAlphaIndices();
         emit GenerationIncremented(currentGeneration);
     }
@@ -319,19 +302,26 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
     function _distributeFunds(uint256 totalAmount) private {
         require(address(this).balance >= totalAmount, "Insufficient balance");
 
-        (bool success,) = nukeFundAddress.call{value: totalAmount}("");
+        address nukeFundAddress = _getNukeFundAddress();
+        (bool success,) = nukeFundAddress.call{ value: totalAmount }("");
         require(success, "ETH send failed");
 
         emit FundsDistributedToNukeFund(nukeFundAddress, totalAmount);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 firstTokenId, uint256 batchSize)
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 firstTokenId,
+        uint256 batchSize
+    )
         internal
         virtual
         override
     {
         super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
 
+        IEntityForging entityForgingContract = _getEntityForging();
         uint256 listedId = entityForgingContract.getListedTokenIds(firstTokenId);
         /// @dev don't update the transferred timestamp if from and to address are same
         if (from != to) {
@@ -355,5 +345,21 @@ contract TraitForgeNft is ITraitForgeNft, ERC721Enumerable, ReentrancyGuard, Own
             entropy = entropy * 10 + bit;
         }
         return entropy;
+    }
+
+    function _getEntityForging() private view returns (IEntityForging) {
+        return IEntityForging(_addressProvider.getEntityForging());
+    }
+
+    function _getEntropyGenerator() private view returns (IEntropyGenerator) {
+        return IEntropyGenerator(_addressProvider.getEntropyGenerator());
+    }
+
+    function _getAirdrop() private view returns (IAirdrop) {
+        return IAirdrop(_addressProvider.getAirdrop());
+    }
+
+    function _getNukeFundAddress() private view returns (address) {
+        return _addressProvider.getNukeFund();
     }
 }

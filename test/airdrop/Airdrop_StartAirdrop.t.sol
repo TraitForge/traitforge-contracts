@@ -1,51 +1,42 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {AirdropTest} from "test/airdrop/AirdropTest.t.sol";
-import {Airdrop} from "contracts/Airdrop.sol";
+import { AirdropTest } from "test/airdrop/AirdropTest.t.sol";
+import { Airdrop } from "contracts/Airdrop.sol";
+import { Errors } from "contracts/libraries/Errors.sol";
 
 contract Airdrop_StartAirdrop is AirdropTest {
-    function testRevert_when_not_owner() public {
-        vm.expectRevert(bytes("Ownable: caller is not the owner"));
-        airdrop.startAirdrop(amount);
+    function testRevert__airdrop__whenNotAuthorized() public {
+        vm.expectRevert(abi.encodeWithSelector(Errors.CallerNotAirdropAccessor.selector, _randomUser));
+        vm.prank(_randomUser);
+        _airdrop.startAirdrop(amount);
     }
 
-    function testRevert_when_paused() public {
-        vm.prank(owner);
-        airdrop.pause();
+    function testRevert__airdrop__whenIsPaused() public {
+        vm.prank(_protocolMaintainer);
+        _airdrop.pause();
         vm.expectRevert(bytes("Pausable: paused"));
-        airdrop.startAirdrop(amount);
+        _airdrop.startAirdrop(amount);
     }
 
-    function testRevert_when_already_started() public {
-        _transferAndApproveTrait();
-        airdrop.setTraitToken(address(trait));
-        airdrop.startAirdrop(amount);
+    function testRevert__airdrop__whenHasAlreadyStarted() public {
+        _startAirdrop();
+        vm.startPrank(_airdropAccessor);
         vm.expectRevert(Airdrop.Airdrop__AlreadyStarted.selector);
-        airdrop.startAirdrop(amount);
+        _airdrop.startAirdrop(amount);
     }
 
-    function testRevert_when_amount_is_zero() public {
-        vm.startPrank(owner);
-        airdrop.setTraitToken(address(trait));
+    function testRevert__airdrop__whenAmountIsZero() public {
+        vm.startPrank(_airdropAccessor);
         vm.expectRevert(Airdrop.Airdrop__InvalidAmount.selector);
-        airdrop.startAirdrop(0);
+        _airdrop.startAirdrop(0);
     }
 
-    function testRevert_when_traitToken_is_zero() public {
-        vm.startPrank(owner);
-        vm.expectRevert(Airdrop.Airdrop__AddressZero.selector);
-        airdrop.startAirdrop(amount);
-    }
+    function test__airdrop__startAirdrop() public {
+        _startAirdrop();
 
-    function test_start_airdrop() public {
-        _transferAndApproveTrait();
-        airdrop.setTraitToken(address(trait));
-        airdrop.startAirdrop(amount);
-
-        assertEq(airdrop.totalTokenAmount(), amount);
-        assertEq(trait.balanceOf(address(airdrop)), amount);
-        assertEq(address(airdrop.traitToken()), address(trait));
-        assertEq(airdrop.airdropStarted(), true);
+        assertEq(_airdrop.totalTokenAmount(), amount);
+        assertEq(_trait.balanceOf(address(_airdrop)), amount);
+        assertEq(_airdrop.airdropStarted(), true);
     }
 }

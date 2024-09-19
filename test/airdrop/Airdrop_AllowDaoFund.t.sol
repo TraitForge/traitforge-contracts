@@ -1,50 +1,43 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {AirdropTest} from "test/airdrop/AirdropTest.t.sol";
-import {Airdrop} from "contracts/Airdrop.sol";
+import { AirdropTest } from "test/airdrop/AirdropTest.t.sol";
+import { Airdrop } from "contracts/Airdrop.sol";
+import {Errors} from "contracts/libraries/Errors.sol";
+
 
 contract Airdrop_AllowDaoFund is AirdropTest {
-    function testRevert_whenNotOwner() public {
-        vm.expectRevert(bytes("Ownable: caller is not the owner"));
-        airdrop.allowDaoFund();
+    function testRevert__airdrop__allowDao__whenNotAuthorized() public {
+        vm.expectRevert(abi.encodeWithSelector(Errors.CallerNotAirdropAccessor.selector, _randomUser));
+        vm.prank(_randomUser);
+        _airdrop.allowDaoFund();
     }
 
-    function testRevert_when_not_started() public {
-        vm.prank(owner);
+    function testRevert__airdrop__allowDao__whenNotStarted() public {
+        vm.prank(_airdropAccessor);
         vm.expectRevert(Airdrop.Airdrop__NotStarted.selector);
-        airdrop.allowDaoFund();
+        _airdrop.allowDaoFund();
     }
 
-    function testRevert_when_amount_is_zero() public {
-        vm.startPrank(owner);
-        airdrop.setTraitToken(address(trait));
+    function testRevert__airdrop__allowDao__whenAmountIsZero() public {
+        vm.startPrank(_airdropAccessor);
         vm.expectRevert(Airdrop.Airdrop__InvalidAmount.selector);
-        airdrop.startAirdrop(0);
+        _airdrop.startAirdrop(0);
     }
 
-    function testRevert_when_traitToken_is_zero() public {
-        vm.startPrank(owner);
-        vm.expectRevert(Airdrop.Airdrop__AddressZero.selector);
-        airdrop.startAirdrop(amount);
-    }
-
-    function testRevert_when_dao_fund_already_allowed() public {
-        _transferAndApproveTrait();
-        airdrop.setTraitToken(address(trait));
-        airdrop.startAirdrop(amount);
-
-        airdrop.allowDaoFund();
+    function testRevert__airdrop__allowDao__whenDaoFundAlreadyAllowed() public {
+        _startAirdrop();
+        vm.startPrank(_airdropAccessor);
+        _airdrop.allowDaoFund();
         vm.expectRevert(Airdrop.Airdrop__AlreadyAllowed.selector);
-        airdrop.allowDaoFund();
+        _airdrop.allowDaoFund();
     }
 
-    function test_allow_dao_fund() public {
-        _transferAndApproveTrait();
-        airdrop.setTraitToken(address(trait));
-        airdrop.startAirdrop(amount);
-        airdrop.allowDaoFund();
+    function test__airdrop__allowDao() public {
+        _startAirdrop();
+        vm.startPrank(_airdropAccessor);
+        _airdrop.allowDaoFund();
 
-        assertEq(airdrop.daoFundAllowed(), true);
+        assertEq(_airdrop.daoFundAllowed(), true);
     }
 }

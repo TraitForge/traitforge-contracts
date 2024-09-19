@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+
 /// @title IAddressProvider
 /// @notice Contract that handle the address of the different contracts.
 interface IAddressProvider {
     //----------------------------------------
     // Events
     //----------------------------------------
-
     event AirdropUpdated(address newAirdropAddress);
 
     event DAOFundUpdated(address newDAOFundAddress);
@@ -29,6 +30,8 @@ interface IAddressProvider {
     //----------------------------------------
     // Functions
     //----------------------------------------
+
+    function getAccessController() external view returns (IAccessControl);
 
     /// @notice Get the instance of the Airdrop contract.
     /// @return The address of the Airdrop contract.

@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC20, ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import {ITrait} from "./interfaces/ITrait.sol";
+import { ERC20, ERC20Pausable } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import { ITrait } from "./interfaces/ITrait.sol";
 
 contract Trait is ITrait, ERC20Pausable {
     uint8 private _decimals;
 
-    constructor(string memory _name, string memory _symbol, uint8 _decimal, uint256 _totalSupply)
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimal,
+        uint256 _totalSupply
+    )
         ERC20(_name, _symbol)
     {
         _decimals = _decimal;

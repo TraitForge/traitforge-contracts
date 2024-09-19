@@ -1,38 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {Airdrop} from "contracts/Airdrop.sol";
-import {Trait} from "contracts/Trait.sol";
-import {DeployAirdrop} from "script/airdrop/DeployAirdrop.s.sol";
-import {DeployTrait} from "script/trait/DeployTrait.s.sol";
+import { Deploys } from "test/shared/Deploys.sol";
+import { Roles } from "contracts/libraries/Roles.sol";
 
-contract AirdropTest is Test {
-    Airdrop public airdrop;
-    Trait public trait;
-    address public owner;
-    address minter = makeAddr("minter");
-    uint256 public amount = 1_000_000 ether;
+contract AirdropTest is Deploys {
+    address internal _airdropAccessor = makeAddr("airdropAccessor");
+    uint256 internal amount = 1_000_000 ether;
 
-    function setUp() public virtual {
-        vm.prank(minter);
-        trait = new Trait("Trait", "TRAIT", 18, amount);
-        airdrop = (new DeployAirdrop()).run();
-        owner = airdrop.owner();
-    }
-
-    function _transferAndApproveTrait() internal {
-        vm.prank(minter);
-        trait.transfer(owner, amount);
-
-        vm.startPrank(owner);
-        trait.approve(address(airdrop), amount);
+    function setUp() public virtual override {
+        super.setUp();
+        vm.prank(_defaultAdmin);
+        _accessController.grantRole(Roles.AIRDROP_ACCESSOR, _airdropAccessor);
     }
 
     function _startAirdrop() internal {
-        _transferAndApproveTrait();
-        airdrop.setTraitToken(address(trait));
-        airdrop.startAirdrop(amount);
-        vm.stopPrank();
+        vm.prank(_traitMinter);
+        _trait.transfer(_airdropAccessor, amount);
+        vm.prank(_airdropAccessor);
+        _trait.approve(address(_airdrop), amount);
+        vm.prank(_airdropAccessor);
+        _airdrop.startAirdrop(amount);
     }
 }

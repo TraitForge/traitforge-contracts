@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {ITraitForgeNft} from "./interfaces/ITraitForgeNft.sol";
-import {IEntityForging} from "./interfaces/IEntityForging.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
+import { ITraitForgeNft } from "./interfaces/ITraitForgeNft.sol";
+import { IEntityForging } from "./interfaces/IEntityForging.sol";
+import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.sol";
 
-contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
-    ITraitForgeNft public nftContract;
+contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGuard, Pausable {
+    // Type declarations
+
+    // Events
+
+    // Modifiers
+
+    // State variables
     address payable public nukeFundAddress;
     uint256 public taxCut = 1000; //10%
     uint256 private constant BPS = 10_000; // denominator of basis points
@@ -24,61 +30,47 @@ contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
     mapping(uint256 => uint8) public forgingCounts; // track forgePotential
     mapping(uint256 => uint256) private lastForgeResetTimestamp;
 
-    constructor(address _traitForgeNft) {
-        nftContract = ITraitForgeNft(_traitForgeNft);
-    }
+    // Functions
 
-    function pause() public onlyOwner {
+    constructor(address _addressProvider) AddressProviderResolver(_addressProvider) { }
+
+    /**
+     * external & public functions *******************************
+     */
+
+    //////////////////////////// write functions ////////////////////////////
+
+    function pause() public onlyProtocolMaintainer {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyProtocolMaintainer {
         _unpause();
     }
 
-    // allows the owner to set NukeFund address
-    function setNukeFundAddress(address payable _nukeFundAddress) external onlyOwner {
-        nukeFundAddress = _nukeFundAddress;
-    }
-
-    function setTaxCut(uint256 _taxCut) external onlyOwner {
+    function setTaxCut(uint256 _taxCut) external onlyProtocolMaintainer {
         require(_taxCut <= BPS, "Tax cut cannot exceed 100%");
         taxCut = _taxCut;
     }
 
-    function setOneYearInDays(uint256 value) external onlyOwner {
+    function setOneYearInDays(uint256 value) external onlyProtocolMaintainer {
         oneYearInDays = value;
     }
 
-    function setMinimumListingFee(uint256 _fee) external onlyOwner {
+    function setMinimumListingFee(uint256 _fee) external onlyProtocolMaintainer {
         minimumListFee = _fee;
-    }
-
-    function fetchListings() external view returns (Listing[] memory _listings) {
-        _listings = new Listing[](listingCount + 1);
-        for (uint256 i = 1; i <= listingCount; ++i) {
-            _listings[i] = listings[i];
-        }
-    }
-
-    function getListedTokenIds(uint256 tokenId_) external view override returns (uint256) {
-        return listedTokenIds[tokenId_];
-    }
-
-    function getListings(uint256 id) external view override returns (Listing memory) {
-        return listings[id];
     }
 
     function listForForging(uint256 tokenId, uint256 fee) public whenNotPaused nonReentrant {
         Listing memory _listingInfo = listings[listedTokenIds[tokenId]];
-
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         require(!_listingInfo.isListed, "Token is already listed for forging");
-        require(nftContract.ownerOf(tokenId) == msg.sender, "Caller must own the token");
+        require(traitForgeNft.ownerOf(tokenId) == msg.sender, "Caller must own the token");
         require(fee >= minimumListFee, "Fee should be higher than minimum listing fee");
 
         _resetForgingCountIfNeeded(tokenId);
 
-        uint256 entropy = nftContract.getTokenEntropy(tokenId); // Retrieve entropy for tokenId
+        uint256 entropy = traitForgeNft.getTokenEntropy(tokenId); // Retrieve entropy for tokenId
         uint8 forgePotential = uint8((entropy / 10) % 10); // Extract the 5th digit from the entropy
         require(forgePotential > 0 && forgingCounts[tokenId] < forgePotential, "Entity has reached its forging limit");
 
@@ -92,7 +84,10 @@ contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
         emit ListedForForging(tokenId, fee);
     }
 
-    function forgeWithListed(uint256 forgerTokenId, uint256 mergerTokenId)
+    function forgeWithListed(
+        uint256 forgerTokenId,
+        uint256 mergerTokenId
+    )
         external
         payable
         whenNotPaused
@@ -117,8 +112,9 @@ contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
         // as it is already checked in listForForging for the forger
         forgingCounts[forgerId]++;
 
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         // Check and update for merger token's forge potential
-        uint256 mergerEntropy = nftContract.getTokenEntropy(mergerId);
+        uint256 mergerEntropy = traitForgeNft.getTokenEntropy(mergerId);
         require(mergerEntropy % 3 != 0, "Not merger");
         uint8 mergerForgePotential = uint8((mergerEntropy / 10) % 10); // Extract the 5th digit from the entropy
         forgingCounts[mergerId]++;
@@ -126,36 +122,63 @@ contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
             mergerForgePotential > 0 && forgingCounts[mergerId] <= mergerForgePotential, "forgePotential insufficient"
         );
 
-        uint256 devShare = (msg.value * taxCut) / BPS;
-        uint256 forgingFee = _forgerListingInfo.fee;
-        uint256 forgerShare = forgingFee - devShare;
-        address payable forgerOwner = payable(nftContract.ownerOf(forgerId));
+        // uint256 devShare = (msg.value * taxCut) / BPS;
+        // uint256 forgingFee = _forgerListingInfo.fee;
+        // uint256 forgerShare = forgingFee - devShare;
+        // address payable forgerOwner = payable(traitForgeNft.ownerOf(forgerId));
+        // (bool success,) = nukeFundAddress.call{ value: devShare }("");
+        // require(success, "Failed to send to NukeFund");
+        // (bool success_forge,) = forgerOwner.call{ value: forgerShare }("");
+        // require(success_forge, "Failed to send to Forge Owner");
 
-        uint256 newTokenId = nftContract.forge(msg.sender, forgerId, mergerId, "");
+        _processFees(forgerId, _forgerListingInfo.fee, msg.value, traitForgeNft);
+
+        uint256 newTokenId = traitForgeNft.forge(msg.sender, forgerId, mergerId, "");
         forgedPairs[lowerId][higherId] = true;
-        (bool success,) = nukeFundAddress.call{value: devShare}("");
-        require(success, "Failed to send to NukeFund");
-        (bool success_forge,) = forgerOwner.call{value: forgerShare}("");
-        require(success_forge, "Failed to send to Forge Owner");
 
         // Cancel listed forger nft
         _cancelListingForForging(forgerId);
 
-        uint256 newEntropy = nftContract.getTokenEntropy(newTokenId);
+        uint256 newEntropy = traitForgeNft.getTokenEntropy(newTokenId);
 
-        emit EntityForged(newTokenId, forgerId, mergerId, newEntropy, forgingFee);
+        emit EntityForged(newTokenId, forgerId, mergerId, newEntropy, _forgerListingInfo.fee);
 
         return newTokenId;
     }
 
     function cancelListingForForging(uint256 tokenId) external whenNotPaused nonReentrant {
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         require(
-            nftContract.ownerOf(tokenId) == msg.sender || msg.sender == address(nftContract),
+            traitForgeNft.ownerOf(tokenId) == msg.sender || msg.sender == address(traitForgeNft),
             "Caller must own the token"
         );
         require(listings[listedTokenIds[tokenId]].isListed, "Token not listed for forging");
 
         _cancelListingForForging(tokenId);
+    }
+
+    //////////////////////////// read functions ////////////////////////////
+
+    function fetchListings() external view returns (Listing[] memory _listings) {
+        _listings = new Listing[](listingCount + 1);
+        for (uint256 i = 1; i <= listingCount; ++i) {
+            _listings[i] = listings[i];
+        }
+    }
+
+    function getListedTokenIds(uint256 tokenId_) external view override returns (uint256) {
+        return listedTokenIds[tokenId_];
+    }
+
+    function getListings(uint256 id) external view override returns (Listing memory) {
+        return listings[id];
+    }
+
+    /**
+     * internal & private *******************************************
+     */
+    function _getTraitForgeNft() private view returns (ITraitForgeNft) {
+        return ITraitForgeNft(_addressProvider.getTraitForgeNft());
     }
 
     function _cancelListingForForging(uint256 tokenId) internal {
@@ -174,15 +197,39 @@ contract EntityForging is IEntityForging, ReentrancyGuard, Ownable, Pausable {
         }
     }
 
-    function _forgePreGuards(uint256 forgerTokenId, uint256 mergerTokenId, Listing memory _forgerListingInfo)
+    function _processFees(
+        uint256 forgerId,
+        uint256 forgingFee,
+        uint256 msgValue,
+        ITraitForgeNft traitForgeNft
+    )
+        private
+    {
+        uint256 devShare = (msgValue * taxCut) / BPS;
+        uint256 forgerShare = forgingFee - devShare;
+
+        (bool success,) = nukeFundAddress.call{ value: devShare }("");
+        require(success, "Failed to send to NukeFund");
+
+        address payable forgerOwner = payable(traitForgeNft.ownerOf(forgerId));
+        (bool success_forge,) = forgerOwner.call{ value: forgerShare }("");
+        require(success_forge, "Failed to send to Forge Owner");
+    }
+
+    function _forgePreGuards(
+        uint256 forgerTokenId,
+        uint256 mergerTokenId,
+        Listing memory _forgerListingInfo
+    )
         private
         view
     {
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         require(_forgerListingInfo.isListed, "Forger's entity not listed for forging");
         require(forgerTokenId != 0 && mergerTokenId != 0, "Invalid token ID: Token ID cannot be 0");
-        require(nftContract.ownerOf(mergerTokenId) == msg.sender, "Caller must own the merger token");
+        require(traitForgeNft.ownerOf(mergerTokenId) == msg.sender, "Caller must own the merger token");
         require(
-            nftContract.getTokenGeneration(mergerTokenId) == nftContract.getTokenGeneration(forgerTokenId),
+            traitForgeNft.getTokenGeneration(mergerTokenId) == traitForgeNft.getTokenGeneration(forgerTokenId),
             "Invalid token generation"
         );
     }

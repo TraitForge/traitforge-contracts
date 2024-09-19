@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {IEntityTrading} from "./interfaces/IEntityTrading.sol";
-import {ITraitForgeNft} from "./interfaces/ITraitForgeNft.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
+import { IEntityTrading } from "./interfaces/IEntityTrading.sol";
+import { ITraitForgeNft } from "./interfaces/ITraitForgeNft.sol";
+import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.sol";
 
-contract EntityTrading is IEntityTrading, ReentrancyGuard, Ownable, Pausable {
-    ITraitForgeNft public nftContract;
+contract EntityTrading is IEntityTrading, AddressProviderResolver, ReentrancyGuard, Pausable {
     address payable public nukeFundAddress;
     uint256 private constant BPS = 10_000; // denominator of basis points
     uint256 public taxCut = 1000; //10%
@@ -19,24 +18,17 @@ contract EntityTrading is IEntityTrading, ReentrancyGuard, Ownable, Pausable {
     /// @dev index -> listing info
     mapping(uint256 => Listing) public listings;
 
-    constructor(address _traitForgeNft) {
-        nftContract = ITraitForgeNft(_traitForgeNft);
-    }
+    constructor(address addressProvider) AddressProviderResolver(addressProvider) { }
 
-    function pause() public onlyOwner {
+    function pause() public onlyProtocolMaintainer {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyProtocolMaintainer {
         _unpause();
     }
 
-    // allows the owner to set NukeFund address
-    function setNukeFundAddress(address payable _nukeFundAddress) external onlyOwner {
-        nukeFundAddress = _nukeFundAddress;
-    }
-
-    function setTaxCut(uint256 _taxCut) external onlyOwner {
+    function setTaxCut(uint256 _taxCut) external onlyProtocolMaintainer {
         require(_taxCut <= BPS, "Tax cut cannot exceed 100%");
         taxCut = _taxCut;
     }
@@ -44,6 +36,7 @@ contract EntityTrading is IEntityTrading, ReentrancyGuard, Ownable, Pausable {
     // function to lsit NFT for sale
     function listNFTForSale(uint256 tokenId, uint256 price) public whenNotPaused nonReentrant {
         require(price > 0, "Price must be greater than zero");
+        ITraitForgeNft nftContract = _getTraitForgeNft();
         require(nftContract.ownerOf(tokenId) == msg.sender, "Sender must be the NFT owner.");
         require(
             nftContract.getApproved(tokenId) == address(this) || nftContract.isApprovedForAll(msg.sender, address(this)),
@@ -71,9 +64,9 @@ contract EntityTrading is IEntityTrading, ReentrancyGuard, Ownable, Pausable {
         transferToNukeFund(devShare); // transfer contribution to nukeFund
 
         // transfer NFT from contract to buyer
-        (bool success,) = payable(listing.seller).call{value: sellerProceeds}("");
+        (bool success,) = payable(listing.seller).call{ value: sellerProceeds }("");
         require(success, "Failed to send to seller");
-        nftContract.transferFrom(address(this), msg.sender, tokenId); // transfer NFT to the buyer
+        _getTraitForgeNft().transferFrom(address(this), msg.sender, tokenId); // transfer NFT to the buyer
 
         delete listings[listedTokenIds[tokenId]]; // remove listing
 
@@ -87,7 +80,7 @@ contract EntityTrading is IEntityTrading, ReentrancyGuard, Ownable, Pausable {
         require(listing.seller == msg.sender, "Only the seller can canel the listing.");
         require(listing.isActive, "Listing is not active.");
 
-        nftContract.transferFrom(address(this), msg.sender, tokenId); // transfer the nft back to seller
+        _getTraitForgeNft().transferFrom(address(this), msg.sender, tokenId); // transfer the nft back to seller
 
         delete listings[listedTokenIds[tokenId]]; // mark the listing as inactive or delete it
 
@@ -96,9 +89,17 @@ contract EntityTrading is IEntityTrading, ReentrancyGuard, Ownable, Pausable {
 
     // Correct and secure version of transferToNukeFund function
     function transferToNukeFund(uint256 amount) private {
-        require(nukeFundAddress != address(0), "NukeFund address not set");
-        (bool success,) = nukeFundAddress.call{value: amount}("");
+        require(_getNukeFundAddress() != address(0), "NukeFund address not set");
+        (bool success,) = nukeFundAddress.call{ value: amount }("");
         require(success, "Failed to send Ether to NukeFund");
         emit NukeFundContribution(address(this), amount);
+    }
+
+    function _getTraitForgeNft() private view returns (ITraitForgeNft) {
+        return ITraitForgeNft(_addressProvider.getTraitForgeNft());
+    }
+
+    function _getNukeFundAddress() private view returns (address) {
+        return _addressProvider.getNukeFund();
     }
 }

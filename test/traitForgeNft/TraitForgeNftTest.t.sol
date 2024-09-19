@@ -22,7 +22,7 @@ contract TraitForgeNftTest is Test {
 
     function setUp() public virtual {
         vm.prank(owner);
-        tfNft = new TraitForgeNft();
+        tfNft = new TraitForgeNft(address(0x0A));
     }
 
     function _deactivateWhitelist() internal {

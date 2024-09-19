@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {DevFundTest} from "./DevFundTest.t.sol";
-import {DevFund} from "contracts/DevFund.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { DevFundTest } from "./DevFundTest.t.sol";
+import { DevFund } from "contracts/DevFund.sol";
 
 contract DevFundTest_claim is DevFundTest {
     address dev1 = makeAddr("dev1");
@@ -16,29 +16,29 @@ contract DevFundTest_claim is DevFundTest {
 
     function test_devFund__claim__whenDevNotAdded() public {
         vm.prank(dev1);
-        devFund.claim();
-        (, uint256 devRewardDebt,) = devFund.devInfo(dev1);
-        assertEq(devFund.totalRewardDebt(), devRewardDebt);
+        _devFund.claim();
+        (, uint256 devRewardDebt,) = _devFund.devInfo(dev1);
+        assertEq(_devFund.totalRewardDebt(), devRewardDebt);
     }
 
     function test_devFund__claim() public {
         _addDevsAndETH();
-        (uint256 devWeightBF, uint256 devRewardDebtBF,) = devFund.devInfo(dev1);
+        (uint256 devWeightBF, uint256 devRewardDebtBF,) = _devFund.devInfo(dev1);
         vm.prank(dev1);
-        devFund.claim();
-        (, uint256 devRewardDebt, uint256 devPendingRewards) = devFund.devInfo(dev1);
-        assertEq(devFund.totalRewardDebt(), devRewardDebt);
+        _devFund.claim();
+        (, uint256 devRewardDebt, uint256 devPendingRewards) = _devFund.devInfo(dev1);
+        assertEq(_devFund.totalRewardDebt(), devRewardDebt);
         assertEq(devPendingRewards, 0);
-        assertEq((devFund.totalRewardDebt() - devRewardDebtBF) * devWeightBF, dev1.balance);
+        assertEq((_devFund.totalRewardDebt() - devRewardDebtBF) * devWeightBF, dev1.balance);
     }
 
     function _addDevsAndETH() internal {
-        vm.startPrank(owner);
-        vm.deal(owner, amountToDevFund);
-        devFund.addDev(dev1, weightDev1);
-        devFund.addDev(dev2, weightDev2);
-        devFund.addDev(dev3, weightDev3);
-        (bool success,) = payable(address(devFund)).call{value: amountToDevFund}("");
+        vm.startPrank(_devFundAccessor);
+        vm.deal(_devFundAccessor, amountToDevFund);
+        _devFund.addDev(dev1, weightDev1);
+        _devFund.addDev(dev2, weightDev2);
+        _devFund.addDev(dev3, weightDev3);
+        (bool success,) = payable(address(_devFund)).call{ value: amountToDevFund }("");
         assert(success);
         vm.stopPrank();
     }
