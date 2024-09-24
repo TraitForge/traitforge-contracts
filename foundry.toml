@@ -1,12 +1,19 @@
 [profile.default]
+remappings = [
+    "@forge-std/=node_modules/forge-std/src/",
+    "@openzeppelin/=node_modules/@openzeppelin/",
+]
+names = true
+sizes = true
+auto_detect_solc = false
 src = "contracts"
 out = "artifacts"
-libs = ["node_modules", "lib"]
+libs = ["node_modules"]
 solc = "0.8.23"
 test = "test"
 optimizer = true
 optimizer_runs = 1000
-
+fs_permissions = [{ access = "read", path = "./config/" }]
 
 [fmt]
 bracket_spacing = true
@@ -20,5 +27,13 @@ wrap_comments = true
 
 [profile.test]
 via-ir = false
+
+[rpc_endpoints]
+base = "https://base-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+base_sepolia = "https://base-sepolia.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+
+[etherscan]
+base = { key = "${API_KEY_BASESCAN}" }
+base_sepolia = { key = "${API_KEY_BASESCAN}" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -114,7 +114,6 @@ contract Deploys is Test {
     }
 
     function _deployAccessController() private returns (AccessController) {
-        vm.prank(_defaultAdmin);
-        return new AccessController(_protocolMaintainer);
+        return new AccessController(_defaultAdmin, _protocolMaintainer);
     }
 }

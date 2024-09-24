@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {AirdropTest} from "test/airdrop/AirdropTest.t.sol";
+import {AirdropTest} from "../airdrop/AirdropTest.t.sol";
 import {Airdrop} from "contracts/Airdrop.sol";
 import {Errors} from "contracts/libraries/Errors.sol";
 

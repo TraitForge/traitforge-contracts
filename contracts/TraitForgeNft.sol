@@ -195,7 +195,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         return price;
     }
 
-    function getTokenEntropy(uint256 tokenId) public view returns (uint256) {
+    function getTokenEntropy(uint256 tokenId) public view override returns (uint256) {
         require(ownerOf(tokenId) != address(0), "ERC721: query for nonexistent token");
         return tokenEntropy[tokenId];
     }

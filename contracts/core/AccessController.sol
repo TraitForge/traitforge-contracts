@@ -8,8 +8,11 @@ import { Roles } from "../libraries/Roles.sol";
 /// @title AccessController
 /// @notice Contract the handle access right for the protocol.
 contract AccessController is AccessControl {
-    constructor(address _protocolMaintainer) {
+    constructor(address _defaultAdmin, address _protocolMaintainer) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(Roles.PROTOCOL_MAINTAINER, msg.sender);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
         _grantRole(Roles.PROTOCOL_MAINTAINER, _protocolMaintainer);
     }
 }

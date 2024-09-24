@@ -44,6 +44,7 @@ contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable
 
     //////////////////////////// write functions ////////////////////////////
 
+    // only accessible from NFT contract
     function startAirdrop(uint256 amount) external whenNotPaused nonReentrant onlyAirdropAccessor {
         if (started) revert Airdrop__AlreadyStarted();
         if (amount == 0) revert Airdrop__InvalidAmount();

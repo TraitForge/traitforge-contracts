@@ -26,17 +26,17 @@ abstract contract AddressProviderResolver {
         _;
     }
 
-    /// @notice Check that the caller has the DAOFUND_ACCESSOR
+    /// @notice Check that the caller has the DAO_FUND_ACCESSOR
     modifier onlyDaoFundAccessor() {
-        if (!_addressProvider.getAccessController().hasRole(Roles.DAOFUND_ACCESSOR, msg.sender)) {
+        if (!_addressProvider.getAccessController().hasRole(Roles.DAO_FUND_ACCESSOR, msg.sender)) {
             revert Errors.CallerNotDaoFundAccessor(msg.sender);
         }
         _;
     }
 
-    /// @notice Check that the caller has the DAOFUND_ACCESSOR
+    /// @notice Check that the caller has the DEV_FUND_ACCESSOR
     modifier onlyDevFundAccessor() {
-        if (!_addressProvider.getAccessController().hasRole(Roles.DEVFUND_ACCESSOR, msg.sender)) {
+        if (!_addressProvider.getAccessController().hasRole(Roles.DEV_FUND_ACCESSOR, msg.sender)) {
             revert Errors.CallerNotDevFundAccessor(msg.sender);
         }
         _;

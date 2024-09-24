@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {TraitForgeNft} from "contracts/TraitForgeNft.sol";
+import { Test, console } from "@forge-std/Test.sol";
+import { TraitForgeNft } from "contracts/TraitForgeNft.sol";
 
 contract TraitForgeNftTest is Test {
     event Minted(

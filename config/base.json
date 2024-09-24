@@ -1,0 +1,19 @@
+{
+  "rpcAlias": "base",
+  "isTestnet": false,
+  "defaultAdminAddress": "0x168A7130f39B1498842E9a92eb865a46927E784a",
+  "protocolMaintainerAddress": "0x168A7130f39B1498842E9a92eb865a46927E784a",
+  "accessController": "0xc88087C766570e03bd9abE5464eb0F59A9465891",
+  "addressProvider": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "airdrop": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "daoFund": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "devFund": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "entityForging": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "entityTrading": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "entropyGenerator": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "nukeFund": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "trait": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "traitForgeNft": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "ethCollector": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4",
+  "uniswapRouter": "0x01BCD5bFB276cAAd3CEeE178776fA4bCC5110bc4"
+}

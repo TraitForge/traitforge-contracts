@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { Test, console } from "forge-std/Test.sol";
+import { Test, console } from "@forge-std/Test.sol";
 import { DevFund } from "contracts/DevFund.sol";
 import { Deploys } from "test/shared/Deploys.sol";
 import { Roles } from "contracts/libraries/Roles.sol";
@@ -19,6 +19,6 @@ contract DevFundTest is Deploys {
     function setUp() public virtual override {
         super.setUp();
         vm.prank(_defaultAdmin);
-        _accessController.grantRole(Roles.DEVFUND_ACCESSOR, _devFundAccessor);
+        _accessController.grantRole(Roles.DEV_FUND_ACCESSOR, _devFundAccessor);
     }
 }
