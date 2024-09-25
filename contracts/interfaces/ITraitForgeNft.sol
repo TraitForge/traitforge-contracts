@@ -16,6 +16,12 @@ interface ITraitForgeNft is IERC721Enumerable {
     event GenerationIncremented(uint256 newGeneration);
     event FundsDistributedToNukeFund(address indexed to, uint256 amount);
     event NukeFundContractUpdated(address nukeFundAddress);
+    event MintedWithBudget(
+        address indexed minter,
+        uint256 amountMinted,
+        uint256 budget,
+        uint256 budgetLeft
+    );
 
     function setStartPrice(uint256 _startPrice) external;
 
@@ -40,7 +46,7 @@ interface ITraitForgeNft is IERC721Enumerable {
 
     function mintToken(bytes32[] calldata proof) external payable;
 
-    function mintWithBudget(bytes32[] calldata proof) external payable;
+    function mintWithBudget(bytes32[] calldata proof, uint256 minAmountMinted) external payable;
 
     function calculateMintPrice() external view returns (uint256);
 

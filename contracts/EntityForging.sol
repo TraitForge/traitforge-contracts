@@ -30,6 +30,9 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     mapping(uint256 => uint8) public forgingCounts; // track forgePotential
     mapping(uint256 => uint256) private lastForgeResetTimestamp;
 
+    //Errors
+    error OffsetOutOfBounds();
+
     // Functions
 
     constructor(address _addressProvider) AddressProviderResolver(_addressProvider) { }
@@ -131,7 +134,7 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         // (bool success_forge,) = forgerOwner.call{ value: forgerShare }("");
         // require(success_forge, "Failed to send to Forge Owner");
 
-        _processFees(forgerId, _forgerListingInfo.fee, msg.value, traitForgeNft);
+        _processTransferShares(forgerId, _forgerListingInfo.fee, msg.value, traitForgeNft);
 
         uint256 newTokenId = traitForgeNft.forge(msg.sender, forgerId, mergerId, "");
         forgedPairs[lowerId][higherId] = true;
@@ -159,10 +162,19 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
 
     //////////////////////////// read functions ////////////////////////////
 
-    function fetchListings() external view returns (Listing[] memory _listings) {
-        _listings = new Listing[](listingCount + 1);
-        for (uint256 i = 1; i <= listingCount; ++i) {
-            _listings[i] = listings[i];
+    function fetchListings(uint256 offset, uint256 limit) external view returns (Listing[] memory _listings) {
+        // L07
+        if (offset >= listingCount) {
+            revert OffsetOutOfBounds();
+        }
+
+        uint256 end = offset + limit;
+        if (end > listingCount) end = listingCount;
+        uint256 resultCount = end - offset;
+
+        _listings = new Listing[](resultCount);
+        for (uint256 i = 0; i < resultCount; ++i) {
+            _listings[i] = listings[offset + i + 1];
         }
     }
 
@@ -197,7 +209,7 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         }
     }
 
-    function _processFees(
+    function _processTransferShares(
         uint256 forgerId,
         uint256 forgingFee,
         uint256 msgValue,

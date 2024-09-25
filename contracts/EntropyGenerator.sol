@@ -19,11 +19,11 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
     uint256 public numberIndexSelectionPoint;
 
     constructor(address addressProvider) AddressProviderResolver(addressProvider) {
-        _writeEntropyBatch();
+        _writeEntropyBatch(); // M05
     }
 
     function nextEntropy() public onlyEntropyAccessor returns (uint256) {
-        require(currentSlotIndex < maxSlotIndex, "Max slot index reached.");
+        require(currentSlotIndex < maxSlotIndex, "Max slot index reached."); // M01
         uint256 entropy;
         do {
             entropy = getEntropy(currentSlotIndex, currentNumberIndex);

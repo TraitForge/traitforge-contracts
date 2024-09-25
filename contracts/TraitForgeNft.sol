@@ -38,6 +38,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
     uint256 private _tokenIds;
     bool public hasGoldenGodbeenMinted = false;
 
+    error NotEnoughTokensMinted();
+
     modifier onlyWhitelisted(bytes32[] calldata proof, bytes32 leaf) {
         if (block.timestamp <= whitelistEndTime) {
             require(MerkleProof.verify(proof, rootHash, leaf), "Not whitelisted user");
@@ -143,7 +145,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         nonReentrant
         onlyWhitelisted(proof, keccak256(abi.encodePacked(msg.sender)))
     {
-        if (generationMintCounts[currentGeneration] >= maxTokensPerGen) {
+        if (generationMintCounts[currentGeneration] == maxTokensPerGen) {
             _incrementGeneration();
         }
         uint256 mintPrice = calculateMintPrice();
@@ -158,7 +160,10 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         }
     }
 
-    function mintWithBudget(bytes32[] calldata proof)
+    function mintWithBudget(
+        bytes32[] calldata proof,
+        uint256 minAmountMinted
+    )
         public
         payable
         whenNotPaused
@@ -168,12 +173,14 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         uint256 amountMinted = 0;
         uint256 budgetLeft = msg.value;
 
-        if (generationMintCounts[currentGeneration] >= maxTokensPerGen) {
+        // L04
+        if (generationMintCounts[currentGeneration] == maxTokensPerGen) {
             _incrementGeneration();
         }
         uint256 mintPrice = calculateMintPrice();
         while (budgetLeft >= mintPrice) {
-            if (generationMintCounts[currentGeneration] >= maxTokensPerGen) {
+            // L04
+            if (generationMintCounts[currentGeneration] == maxTokensPerGen) {
                 _incrementGeneration();
                 mintPrice = calculateMintPrice();
             }
@@ -182,17 +189,26 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
             budgetLeft -= mintPrice;
             mintPrice = calculateMintPrice();
         }
+
+        if (amountMinted < minAmountMinted) revert NotEnoughTokensMinted(); // M04 L03
+
         if (budgetLeft > 0) {
             (bool refundSuccess,) = msg.sender.call{ value: budgetLeft }("");
             require(refundSuccess, "Refund failed.");
         }
+
+        emit MintedWithBudget(msg.sender, amountMinted, msg.value, budgetLeft); // L03
     }
 
-    function calculateMintPrice() public view returns (uint256) {
-        uint256 currentGenMintCount = generationMintCounts[currentGeneration];
-        uint256 priceIncrease = priceIncrement * currentGenMintCount;
-        uint256 price = startPrice + priceIncrease;
-        return price;
+    function calculateMintPrice() public view override returns (uint256) {
+        // M07
+        if (generationMintCounts[currentGeneration] > 0) {
+            uint256 currentGenMintCount = generationMintCounts[currentGeneration];
+            uint256 priceIncrease = priceIncrement * currentGenMintCount;
+            return startPrice + priceIncrease;
+        } else {
+            return startPrice + ((currentGeneration - 1) * priceIncrementByGen);
+        }
     }
 
     function getTokenEntropy(uint256 tokenId) public view override returns (uint256) {
@@ -273,7 +289,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         generationMintCounts[gen]++;
         initialOwners[newTokenId] = newOwner;
 
-        if (generationMintCounts[gen] >= maxTokensPerGen && gen == currentGeneration) {
+        // L04
+        if (generationMintCounts[gen] == maxTokensPerGen && gen == currentGeneration) {
             _incrementGeneration();
         }
 
@@ -287,7 +304,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
     }
 
     function _incrementGeneration() private {
-        require(generationMintCounts[currentGeneration] >= maxTokensPerGen, "Generation limit not yet reached");
+        // Not needed as is the sine qua non of the function and is in private context
+        require(generationMintCounts[currentGeneration] == maxTokensPerGen, "Generation limit not yet reached");
         require(currentGeneration < maxGeneration, "Max generation reached");
         currentGeneration++;
         require(currentGeneration <= maxGeneration, "Maximum generation reached");
@@ -318,6 +336,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         internal
         virtual
         override
+        whenNotPaused // L06
     {
         super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
 
@@ -334,8 +353,6 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
                 entityForgingContract.cancelListingForForging(firstTokenId);
             }
         }
-
-        require(!paused(), "ERC721Pausable: token transfer while paused");
     }
 
     function getInbredEntropy() internal view returns (uint256) {
