@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.23;
 
-import { Script, console } from "@forge-std/Script.sol";
+import { Script } from "@forge-std/Script.sol";
 
 import { Configured, ConfigLib, Config } from "config/Configured.sol";
 

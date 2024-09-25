@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import { BaseScript } from "../Base.s.sol";
 import { AddressProvider } from "contracts/core/AddressProvider.sol";
+import { console } from "@forge-std/console.sol";
 
 contract DeployAddressProvider is BaseScript {
     function run() public virtual initConfig broadcast {
@@ -10,11 +11,11 @@ contract DeployAddressProvider is BaseScript {
             revert AccessControllerAddressIsZero();
         }
         
-        _deployAddressProvider();
-        // console2.log("AccessController deployed at address: ", ap);
+        address newAddressProvider = _deployAddressProvider();
+        console.log("New AddressProvider deployed at address: ", newAddressProvider);
     }
 
-    function _deployAddressProvider() internal returns (AddressProvider) {
-        return new AddressProvider(accessController);
+    function _deployAddressProvider() internal returns (address) {
+        return address(new AddressProvider(accessController));
     }
 }

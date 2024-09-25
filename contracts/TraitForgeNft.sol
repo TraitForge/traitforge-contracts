@@ -12,6 +12,13 @@ import { IAirdrop } from "contracts/interfaces/IAirdrop.sol";
 import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.sol";
 
 contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumerable, ReentrancyGuard, Pausable {
+    modifier onlyWhitelisted(bytes32[] calldata proof, bytes32 leaf) {
+        if (block.timestamp <= whitelistEndTime) {
+            require(MerkleProof.verify(proof, rootHash, leaf), "Not whitelisted user");
+        }
+        _;
+    }
+
     // Constants for token generation and pricing
     uint256 public maxTokensPerGen = 10_000;
     uint256 public startPrice = 0.005 ether;
@@ -28,28 +35,34 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
     uint256 public whitelistEndTime;
 
     // Mappings for token metadata
-    mapping(uint256 => uint256) public tokenCreationTimestamps;
-    mapping(uint256 => uint256) public lastTokenTransferredTimestamp;
-    mapping(uint256 => uint256) public tokenEntropy;
-    mapping(uint256 => uint256) public generationMintCounts;
-    mapping(uint256 => uint256) public tokenGenerations;
-    mapping(uint256 => address) public initialOwners;
+    mapping(uint256 tokenId => uint256 createdAt) public tokenCreationTimestamps;
+    mapping(uint256 tokenId => uint256 lastTransferAt) public lastTokenTransferredTimestamp;
+    mapping(uint256 tokenId => uint256 entropy) public tokenEntropy;
+    mapping(uint256 generation => uint256 mintCounts) public generationMintCounts;
+    mapping(uint256 tokenId => uint256 generation) public tokenGenerations;
+    mapping(uint256 tokenId => address initialOwner) public initialOwners;
 
     uint256 private _tokenIds;
-    bool public hasGoldenGodbeenMinted = false;
+    bool public hasGoldenGodbeenMinted = false; //TODO probably have it per generation
 
     error NotEnoughTokensMinted();
 
-    modifier onlyWhitelisted(bytes32[] calldata proof, bytes32 leaf) {
-        if (block.timestamp <= whitelistEndTime) {
-            require(MerkleProof.verify(proof, rootHash, leaf), "Not whitelisted user");
-        }
-        _;
+    constructor(
+        address addressProvider,
+        bytes32 _rootHash
+    )
+        ERC721("TraitForgeNft", "TFGNFT")
+        AddressProviderResolver(addressProvider)
+    {
+        whitelistEndTime = block.timestamp + 24 hours;
+        rootHash = _rootHash;
     }
 
-    constructor(address addressProvider) ERC721("TraitForgeNft", "TFGNFT") AddressProviderResolver(addressProvider) {
-        whitelistEndTime = block.timestamp + 24 hours;
-    }
+    //////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////// external & public functions /////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////
+
+    //////////////////////////// write functions ////////////////////////////
 
     function pause() public onlyProtocolMaintainer {
         _pause();
@@ -59,6 +72,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         _unpause();
     }
 
+    // TODO this function is not needed as it can be executed on the airdrop contract directly
     function startAirdrop(uint256 amount) external whenNotPaused onlyProtocolMaintainer {
         _getAirdrop().startAirdrop(amount);
     }
@@ -80,20 +94,12 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         maxGeneration = maxGeneration_;
     }
 
-    function setRootHash(bytes32 rootHash_) external onlyProtocolMaintainer {
-        rootHash = rootHash_;
+    function setRootHash(bytes32 _rootHash) external onlyProtocolMaintainer {
+        rootHash = _rootHash;
     }
 
     function setWhitelistEndTime(uint256 endTime_) external onlyProtocolMaintainer {
         whitelistEndTime = endTime_;
-    }
-
-    function getGeneration() public view returns (uint256) {
-        return currentGeneration;
-    }
-
-    function isApprovedOrOwner(address spender, uint256 tokenId) public view returns (bool) {
-        return _isApprovedOrOwner(spender, tokenId);
     }
 
     function burn(uint256 tokenId) external whenNotPaused nonReentrant {
@@ -134,6 +140,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         }
         // Mint the new entity
         uint256 newTokenId = _mintNewEntity(newOwner, newEntropy, newGeneration);
+
+        emit NewForgeOccured(newOwner, newTokenId, parent1Id, parent2Id, newGeneration, newEntropy);
 
         return newTokenId;
     }
@@ -200,6 +208,16 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         emit MintedWithBudget(msg.sender, amountMinted, msg.value, budgetLeft); // L03
     }
 
+    //////////////////////////// view functions ////////////////////////////
+
+    function getGeneration() public view returns (uint256) {
+        return currentGeneration;
+    }
+
+    function isApprovedOrOwner(address spender, uint256 tokenId) public view returns (bool) {
+        return _isApprovedOrOwner(spender, tokenId);
+    }
+
     function calculateMintPrice() public view override returns (uint256) {
         // M07
         if (generationMintCounts[currentGeneration] > 0) {
@@ -216,7 +234,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         return tokenEntropy[tokenId];
     }
 
-    function getTokenGeneration(uint256 tokenId) public view returns (uint256) {
+    function getTokenGeneration(uint256 tokenId) public view override returns (uint256) {
         return tokenGenerations[tokenId];
     }
 
@@ -248,6 +266,11 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         return roleIndicator == 0;
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////// internal & private functions ////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////// write functions /////////////////////////////////
     function _mintInternal(address to, uint256 mintPrice) internal {
         _tokenIds++;
         uint256 newItemId = _tokenIds;
@@ -281,7 +304,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
 
         _tokenIds++;
         uint256 newTokenId = _tokenIds;
-        _mint(newOwner, newTokenId);
+        _mint(newOwner, newTokenId); // we should respect CEI
 
         tokenCreationTimestamps[newTokenId] = block.timestamp;
         tokenEntropy[newTokenId] = entropy;
@@ -354,6 +377,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
             }
         }
     }
+
+    ///////////////////////////////// view functions /////////////////////////////////
 
     function getInbredEntropy() internal view returns (uint256) {
         uint256 entropy = 1;

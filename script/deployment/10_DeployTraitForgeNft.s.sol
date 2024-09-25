@@ -2,27 +2,26 @@
 pragma solidity 0.8.23;
 
 import { BaseScript } from "../Base.s.sol";
-import { AddressProvider } from "contracts/core/AddressProvider.sol";
-import { Roles } from "contracts/libraries/Roles.sol";
+import { console } from "@forge-std/console.sol";
 
 import { TraitForgeNft } from "contracts/TraitForgeNft.sol";
 
 contract DeployTraitForgeNft is BaseScript {
-    function run() public virtual initConfig broadcast {
-        if (traitForgeNft != address(0)) {
-            revert AlreadyDeployed();
-        }
+    error RootHashIsZero();
 
+    function run() public virtual initConfig broadcast {
+        if (rootHash == bytes32(0)) {
+            revert RootHashIsZero();
+        }
         if (addressProvider == address(0)) {
             revert AddressProviderAddressIsZero();
         }
 
-        AddressProvider ap = AddressProvider(addressProvider);
         address nft = _deployTraitForgeNft();
-        ap.setTraitForgeNft(nft);
+        console.log("TraitForgeNft deployed at address: ", nft);
     }
 
     function _deployTraitForgeNft() internal returns (address) {
-        return address(new TraitForgeNft(addressProvider));
+        return address(new TraitForgeNft(addressProvider, rootHash));
     }
 }

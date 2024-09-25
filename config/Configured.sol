@@ -19,6 +19,9 @@ contract Configured is StdChains {
     address internal protocolMaintainer;
     address internal accessController;
     address internal addressProvider;
+    address internal ethCollector;
+    address internal uniswapRouter;
+    bytes32 internal rootHash;
 
     address internal airdrop;
     address internal daoFund;
@@ -29,8 +32,7 @@ contract Configured is StdChains {
     address internal nukeFund;
     address internal trait;
     address internal traitForgeNft;
-    address internal ethCollector;
-    address internal uniswapRouter;
+    
 
     function _network() internal virtual returns (string memory) {
         Chain memory currentChain = getChain(block.chainid);
@@ -57,6 +59,9 @@ contract Configured is StdChains {
         protocolMaintainer = config.getProtocolMaintainerAddress();
         accessController = config.getAccessControllerAddress();
         addressProvider = config.getAddressProviderAddress();
+        ethCollector = config.getEthCollectorAddress();
+        uniswapRouter = config.getUniswapRouterAddress();
+        rootHash = config.getRootHash();
 
         airdrop = config.getAirdropAddress();
         daoFund = config.getDaoFundAddress();
@@ -67,7 +72,6 @@ contract Configured is StdChains {
         nukeFund = config.getNukeFundAddress();
         trait = config.getTraitAddress();
         traitForgeNft = config.getTraitForgeNftAddress();
-        ethCollector = config.getEthCollectorAddress();
-        uniswapRouter = config.getUniswapRouterAddress();
+        
     }
 }

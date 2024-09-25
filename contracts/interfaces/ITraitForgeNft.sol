@@ -22,6 +22,14 @@ interface ITraitForgeNft is IERC721Enumerable {
         uint256 budget,
         uint256 budgetLeft
     );
+    event NewForgeOccured(
+        address indexed forger,
+        uint256 tokenId,
+        uint256 parent1Id,
+        uint256 parent2Id,
+        uint256 generation,
+        uint256 entropy
+    );
 
     function setStartPrice(uint256 _startPrice) external;
 

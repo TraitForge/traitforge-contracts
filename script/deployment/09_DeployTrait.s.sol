@@ -2,23 +2,18 @@
 pragma solidity 0.8.23;
 
 import { BaseScript } from "../Base.s.sol";
-import { AddressProvider } from "contracts/core/AddressProvider.sol";
+import { console } from "@forge-std/console.sol";
 
 import { Trait } from "contracts/Trait.sol";
 
 contract DeployTrait is BaseScript {
     function run() public virtual initConfig broadcast {
-        if (trait != address(0)) {
-            revert AlreadyDeployed();
-        }
-
         if (addressProvider == address(0)) {
             revert AddressProviderAddressIsZero();
         }
 
-        AddressProvider ap = AddressProvider(addressProvider);
-        address t = _deployTrait();
-        ap.setTrait(t);
+        address newTraitAddress = _deployTrait();
+        console.log("Trait deployed at address: ", newTraitAddress);
     }
 
     function _deployTrait() internal returns (address) {

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { Test, console } from "@forge-std/Test.sol";
 import { TraitForgeNft } from "contracts/TraitForgeNft.sol";
+import { Deploys } from "test/shared/Deploys.sol";
 
-contract TraitForgeNftTest is Test {
+contract TraitForgeNftTest is Deploys {
     event Minted(
         address indexed minter,
         uint256 indexed itemId,
@@ -17,16 +17,14 @@ contract TraitForgeNftTest is Test {
     event FundsDistributedToNukeFund(address indexed to, uint256 amount);
     event NukeFundContractUpdated(address nukeFundAddress);
 
-    TraitForgeNft public tfNft;
     address public owner = makeAddr("owner");
 
-    function setUp() public virtual {
-        vm.prank(owner);
-        tfNft = new TraitForgeNft(address(0x0A));
+    function setUp() public override virtual {
+        super.setUp();
     }
 
     function _deactivateWhitelist() internal {
-        vm.prank(owner);
-        tfNft.setWhitelistEndTime(0);
+        vm.prank(_protocolMaintainer);
+        _traitForgeNft.setWhitelistEndTime(0);
     }
 }

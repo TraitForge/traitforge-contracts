@@ -28,6 +28,7 @@ library ConfigLib {
     string internal constant TRAIT_FORGE_NFT = "$.traitForgeNft";
     string internal constant ETH_COLLECTOR = "$.ethCollector";
     string internal constant UNISWAP_ROUTER = "$.uniswapRouter";
+    string internal constant ROOT_HASH = "$.rootHash";
 
     function getAddress(Config storage config, string memory key) internal view returns (address) {
         return config.json.readAddress(string.concat("$.", key));
@@ -114,5 +115,9 @@ library ConfigLib {
 
     function getUniswapRouterAddress(Config storage config) internal view returns (address) {
         return config.json.readAddress(UNISWAP_ROUTER);
+    }
+
+    function getRootHash(Config storage config) internal view returns (bytes32) {
+        return config.json.readBytes32(ROOT_HASH);
     }
 }

@@ -106,7 +106,7 @@ contract Deploys is Test {
     }
 
     function _deployTraitForgeNft() private {
-        _traitForgeNft = new TraitForgeNft(address(_addressProvider));
+        _traitForgeNft = new TraitForgeNft(address(_addressProvider), bytes32(0));
         vm.prank(_protocolMaintainer);
         _addressProvider.setTraitForgeNft(address(_traitForgeNft));
         vm.prank(_defaultAdmin);
