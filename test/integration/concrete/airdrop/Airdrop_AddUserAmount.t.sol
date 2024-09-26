@@ -17,9 +17,10 @@ contract Airdrop_AddUserAmount is AirdropTest {
         _airdrop.addUserAmount(user, 100);
     }
 
-    function testRevert__airdrop__addUserAmount__whenNotStarted() public {
+    function testRevert__airdrop__addUserAmount__whenStarted() public {
+        _startAirdrop();
         vm.prank(_airdropAccessor);
-        vm.expectRevert(Airdrop.Airdrop__NotStarted.selector);
+        vm.expectRevert(Airdrop.Airdrop__AlreadyStarted.selector);
         _airdrop.addUserAmount(user, 100);
     }
 
@@ -33,7 +34,6 @@ contract Airdrop_AddUserAmount is AirdropTest {
     }
 
     function test__airdrop__addUserAmount() public {
-        _startAirdrop();
         uint256 totalValueBefore = _airdrop.totalValue();
         vm.prank(_airdropAccessor);
         _airdrop.addUserAmount(user, 100);

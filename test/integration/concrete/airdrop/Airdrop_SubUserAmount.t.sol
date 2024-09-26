@@ -17,14 +17,14 @@ contract Airdrop_SubUserAmount is AirdropTest {
         _airdrop.subUserAmount(user, amountToSub);
     }
 
-    function testRevert_when_not_started() public {
+    function testRevert_whenStarted() public {
+        _startAirdrop();
         vm.prank(_airdropAccessor);
-        vm.expectRevert(Airdrop.Airdrop__NotStarted.selector);
+        vm.expectRevert(Airdrop.Airdrop__AlreadyStarted.selector);
         _airdrop.subUserAmount(user, amountToSub);
     }
 
     function testRevert_when_is_paused() public {
-        _startAirdrop();
         vm.prank(_protocolMaintainer);
         _airdrop.pause();
         vm.expectRevert(bytes("Pausable: paused"));
@@ -32,14 +32,12 @@ contract Airdrop_SubUserAmount is AirdropTest {
     }
 
     function testRevert_when_amountToSub_higher_than_user_balance() public {
-        _startAirdrop();
         vm.prank(_airdropAccessor);
         vm.expectRevert(Airdrop.Airdrop__InvalidAmount.selector);
         _airdrop.subUserAmount(user, amountToSub);
     }
 
     function test_SubUserAmount() public {
-        _startAirdrop();
         vm.startPrank(_airdropAccessor);
         _airdrop.addUserAmount(user, amountToAdd);
         uint256 totalValueBefore = _airdrop.totalValue();

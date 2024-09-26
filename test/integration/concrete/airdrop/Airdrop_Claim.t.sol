@@ -28,9 +28,9 @@ contract Airdrop_Claim is AirdropTest {
     }
 
     function test_Claim() public {
-        _startAirdrop();
         vm.prank(_airdropAccessor);
         _airdrop.addUserAmount(user, amountToAdd);
+        _startAirdrop();
 
         uint256 totalValueBefore = _airdrop.totalValue();
         vm.prank(user);

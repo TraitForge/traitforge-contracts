@@ -33,7 +33,7 @@ update-roles:
 
 deploy-airdrop:
 	@echo "Deploying airdrop contract on $(NETWORK)..."
-	forge script script/deployment/02_DeployAirdrop.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/02_DeployAirdrop.s.sol --rpc-url $(NETWORK) --with-gas-price 600 --broadcast --verify --optimize
 
 deploy-devFund:
 	@echo "Deploying devFund contract on $(NETWORK)..."

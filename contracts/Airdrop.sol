@@ -61,13 +61,13 @@ contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable
     }
 
     function addUserAmount(address user, uint256 amount) external whenNotPaused nonReentrant onlyAirdropAccessor {
-        if (!started) revert Airdrop__NotStarted();
+        if (started) revert Airdrop__AlreadyStarted();
         userInfo[user] += amount;
         totalValue += amount;
     }
 
     function subUserAmount(address user, uint256 amount) external whenNotPaused nonReentrant onlyAirdropAccessor {
-        if (!started) revert Airdrop__NotStarted();
+        if (started) revert Airdrop__AlreadyStarted();
         if (userInfo[user] < amount) revert Airdrop__InvalidAmount();
         userInfo[user] -= amount;
         totalValue -= amount;
