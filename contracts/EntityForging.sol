@@ -31,7 +31,20 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     mapping(uint256 => uint256) private lastForgeResetTimestamp;
 
     //Errors
-    error OffsetOutOfBounds();
+    error EntityForging__OffsetOutOfBounds();
+    error EntityForging__TokenAlreadyListed();
+    error EntityForging__TokenNotOwnedByCaller();
+    error EntityForging__FeeTooLow();
+    error EntityForging__ForgingLimitReached();
+    error EntityForging__NotForger();
+    error EntityForging__MergerTokenIdIsZero();
+    error EntityForging__ForgerTokenIdNotListed();
+    error EntityForging__MergerTokenNotOwnedByCaller();
+    error EntityForging__TokensNotSameGeneration();
+    error EntityForging__TokensAlreadyForged();
+    error EntityForging__FeeMismatchWithEthSent();
+    error EntityForging__MergerEntropyCannotMerge();
+    error EntityForging__InsufficientForgePotential();
 
     // Functions
 
@@ -67,18 +80,20 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     function listForForging(uint256 tokenId, uint256 fee) public whenNotPaused nonReentrant {
         Listing memory _listingInfo = listings[listedTokenIds[tokenId]];
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        require(!_listingInfo.isListed, "Token is already listed for forging");
-        require(traitForgeNft.ownerOf(tokenId) == msg.sender, "Caller must own the token");
-        require(fee >= minimumListFee, "Fee should be higher than minimum listing fee");
+        if (_listingInfo.isListed) revert EntityForging__TokenAlreadyListed();
+        if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert EntityForging__TokenNotOwnedByCaller();
+        if (fee < minimumListFee) revert EntityForging__FeeTooLow();
 
         _resetForgingCountIfNeeded(tokenId);
 
         uint256 entropy = traitForgeNft.getTokenEntropy(tokenId); // Retrieve entropy for tokenId
         uint8 forgePotential = uint8((entropy / 10) % 10); // Extract the 5th digit from the entropy
-        require(forgePotential > 0 && forgingCounts[tokenId] < forgePotential, "Entity has reached its forging limit");
+        if (!(forgePotential > 0 && forgingCounts[tokenId] < forgePotential)) {
+            revert EntityForging__ForgingLimitReached();
+        }
 
         bool isForger = (entropy % 3) == 0; // Determine if the token is a forger based on entropy
-        require(isForger, "Only forgers can list for forging");
+        if (!isForger) revert EntityForging__NotForger(); // TODO need to mock the entropyGenerator
 
         ++listingCount;
         listings[listingCount] = Listing(msg.sender, tokenId, true, fee);
@@ -98,16 +113,15 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         returns (uint256)
     {
         Listing memory _forgerListingInfo = listings[listedTokenIds[forgerTokenId]];
-        _forgePreGuards(forgerTokenId, mergerTokenId, _forgerListingInfo);
+        _forgePreGuards(forgerTokenId, mergerTokenId, _forgerListingInfo.isListed);
+        if (msg.value != _forgerListingInfo.fee) revert EntityForging__FeeMismatchWithEthSent();
 
         uint256 lowerId = _lowerId(forgerTokenId, mergerTokenId);
         uint256 higherId = _higherId(forgerTokenId, mergerTokenId); //innefficient
-        require(!forgedPairs[lowerId][higherId], "Parents have forged before");
+        if (forgedPairs[lowerId][higherId]) revert EntityForging__TokensAlreadyForged();
 
         uint256 forgerId = forgerTokenId;
         uint256 mergerId = mergerTokenId;
-        require(msg.value == _forgerListingInfo.fee, "Fee cannot be less than or more than msg.value");
-
         _resetForgingCountIfNeeded(forgerId); // Reset for forger if needed
         _resetForgingCountIfNeeded(mergerId); // Reset for merger if needed
 
@@ -118,13 +132,13 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         // Check and update for merger token's forge potential
         uint256 mergerEntropy = traitForgeNft.getTokenEntropy(mergerId);
-        require(mergerEntropy % 3 != 0, "Not merger");
+        if (!(mergerEntropy % 3 != 0)) revert EntityForging__MergerEntropyCannotMerge();
         uint8 mergerForgePotential = uint8((mergerEntropy / 10) % 10); // Extract the 5th digit from the entropy
         forgingCounts[mergerId]++;
-        require(
-            mergerForgePotential > 0 && forgingCounts[mergerId] <= mergerForgePotential, "forgePotential insufficient"
-        );
-
+        if (!(mergerForgePotential > 0 && forgingCounts[mergerId] <= mergerForgePotential)) {
+            revert EntityForging__InsufficientForgePotential();
+        }
+        /// TODO Stack too deep
         // uint256 devShare = (msg.value * taxCut) / BPS;
         // uint256 forgingFee = _forgerListingInfo.fee;
         // uint256 forgerShare = forgingFee - devShare;
@@ -134,7 +148,7 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         // (bool success_forge,) = forgerOwner.call{ value: forgerShare }("");
         // require(success_forge, "Failed to send to Forge Owner");
 
-        _processTransferShares(forgerId, _forgerListingInfo.fee, msg.value, traitForgeNft);
+        _processTransferShares(forgerId, _forgerListingInfo.fee, traitForgeNft);
 
         uint256 newTokenId = traitForgeNft.forge(msg.sender, forgerId, mergerId, "");
         forgedPairs[lowerId][higherId] = true;
@@ -165,7 +179,7 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     function fetchListings(uint256 offset, uint256 limit) external view returns (Listing[] memory _listings) {
         // L07
         if (offset >= listingCount) {
-            revert OffsetOutOfBounds();
+            revert EntityForging__OffsetOutOfBounds();
         }
 
         uint256 end = offset + limit;
@@ -209,15 +223,8 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         }
     }
 
-    function _processTransferShares(
-        uint256 forgerId,
-        uint256 forgingFee,
-        uint256 msgValue,
-        ITraitForgeNft traitForgeNft
-    )
-        private
-    {
-        uint256 devShare = (msgValue * taxCut) / BPS;
+    function _processTransferShares(uint256 forgerId, uint256 forgingFee, ITraitForgeNft traitForgeNft) private {
+        uint256 devShare = (forgingFee * taxCut) / BPS;
         uint256 forgerShare = forgingFee - devShare;
 
         (bool success,) = nukeFundAddress.call{ value: devShare }("");
@@ -228,22 +235,14 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         require(success_forge, "Failed to send to Forge Owner");
     }
 
-    function _forgePreGuards(
-        uint256 forgerTokenId,
-        uint256 mergerTokenId,
-        Listing memory _forgerListingInfo
-    )
-        private
-        view
-    {
+    function _forgePreGuards(uint256 forgerTokenId, uint256 mergerTokenId, bool forgerTokenIdIsListed) private view {
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        require(_forgerListingInfo.isListed, "Forger's entity not listed for forging");
-        require(forgerTokenId != 0 && mergerTokenId != 0, "Invalid token ID: Token ID cannot be 0");
-        require(traitForgeNft.ownerOf(mergerTokenId) == msg.sender, "Caller must own the merger token");
-        require(
-            traitForgeNft.getTokenGeneration(mergerTokenId) == traitForgeNft.getTokenGeneration(forgerTokenId),
-            "Invalid token generation"
-        );
+        if (!forgerTokenIdIsListed) revert EntityForging__ForgerTokenIdNotListed();
+        if (mergerTokenId == 0) revert EntityForging__MergerTokenIdIsZero();
+        if (traitForgeNft.ownerOf(mergerTokenId) != msg.sender) revert EntityForging__MergerTokenNotOwnedByCaller();
+        if (traitForgeNft.getTokenGeneration(mergerTokenId) != traitForgeNft.getTokenGeneration(forgerTokenId)) {
+            revert EntityForging__TokensNotSameGeneration();
+        }
     }
 
     function _lowerId(uint256 tokenId1, uint256 tokenId2) private pure returns (uint256) {

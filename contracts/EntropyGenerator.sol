@@ -20,6 +20,7 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
 
     constructor(address addressProvider) AddressProviderResolver(addressProvider) {
         _writeEntropyBatch(); // M05
+        initializeAlphaIndices();
     }
 
     function nextEntropy() public onlyEntropyAccessor returns (uint256) {

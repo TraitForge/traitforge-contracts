@@ -25,7 +25,6 @@ contract Airdrop_AddUserAmount is AirdropTest {
     }
 
     function testRevert__airdrop__addUserAmount__whenIsPaused() public {
-        _startAirdrop();
         vm.prank(_protocolMaintainer);
         _airdrop.pause();
         vm.expectRevert(bytes("Pausable: paused"));

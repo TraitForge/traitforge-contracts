@@ -109,8 +109,10 @@ contract Deploys is Test {
         _traitForgeNft = new TraitForgeNft(address(_addressProvider), bytes32(0));
         vm.prank(_protocolMaintainer);
         _addressProvider.setTraitForgeNft(address(_traitForgeNft));
-        vm.prank(_defaultAdmin);
+        vm.startPrank(_defaultAdmin);
         _accessController.grantRole(Roles.AIRDROP_ACCESSOR, address(_traitForgeNft));
+        _accessController.grantRole(Roles.ENTROPY_ACCESSOR, address(_traitForgeNft));
+        vm.stopPrank();
     }
 
     function _deployAccessController() private returns (AccessController) {

@@ -1,5 +1,9 @@
 # Phony targets (for organization)
-.PHONY: build clean test deploy
+.PHONY: build clean test deploy install
+
+install:
+	@echo "Installing dependencies..."
+	yarn
 
 # Compilation of contracts
 build:
@@ -11,6 +15,22 @@ clean:
 	@echo "Cleaning up..."
 	forge clean
 
+
+##################################  TESTS  ##################################
+test-name:
+	@echo "Running tests matching name $(NAME)..."
+	forge test --mt $(NAME)
+
+test-contract:
+	@echo "Running tests matching name $(CONTRACT)..."
+	forge test --mc $(CONTRACT)
+
+test:
+	@echo "Running all tests..."
+	forge test
+
+
+##################################  DEPLOYMENT  ##################################
 deploy-accessController:
 	@echo "Deploying AccessControler contract on $(NETWORK)..."
 	forge script script/deployment/00_DeployAccessController.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize

@@ -14,8 +14,13 @@ import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.
 contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumerable, ReentrancyGuard, Pausable {
     modifier onlyWhitelisted(bytes32[] calldata proof, bytes32 leaf) {
         if (block.timestamp <= whitelistEndTime) {
-            require(MerkleProof.verify(proof, rootHash, leaf), "Not whitelisted user");
+            if (!MerkleProof.verify(proof, rootHash, leaf)) revert TraitForgeNft__NotWhiteListed();
         }
+        _;
+    }
+
+    modifier onlyEntityForging() {
+        if (msg.sender != address(_getEntityForging())) revert TraitForgeNft__OnlyEntityForgingAuthorized(msg.sender);
         _;
     }
 
@@ -45,7 +50,14 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
     uint256 private _tokenIds;
     bool public hasGoldenGodbeenMinted = false; //TODO probably have it per generation
 
-    error NotEnoughTokensMinted();
+    error TraitForgeNft__NotEnoughTokensMinted();
+    error TraitForgeNft__NotWhiteListed();
+    error TraitForgeNft__InsufficientETHSent();
+    error TraitForgeNft__MaxGenerationReached();
+    error TraitForgeNft__MinAmountIsZero();
+    error TraitForgeNft__OnlyEntityForgingAuthorized(address caller);
+    error TraitForgeNft__CannotForgeWithSameToken();
+    error TraitForgeNft__NewGenerationCreatedOverMaxGeneration();
 
     constructor(
         address addressProvider,
@@ -123,13 +135,15 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         external
         whenNotPaused
         nonReentrant
+        onlyEntityForging
         returns (uint256)
     {
-        require(msg.sender == address(_getEntityForging()), "unauthorized caller");
+        // TODO check if both parents are valid (already minted) meaning parentId1 and parentId2 are not 0 && both < _tokenIds
+        // if (parent1Id == parent2Id) revert TraitForgeNft__CannotForgeWithSameToken();
         uint256 newGeneration = getTokenGeneration(parent1Id) + 1;
 
         /// Check new generation is not over maxGeneration
-        require(newGeneration <= maxGeneration, "can't be over max generation");
+        if (newGeneration > maxGeneration) revert TraitForgeNft__NewGenerationCreatedOverMaxGeneration();
 
         // Calculate the new entity's entropy
         (uint256 forgerEntropy, uint256 mergerEntropy) = getEntropiesForTokens(parent1Id, parent2Id);
@@ -157,7 +171,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
             _incrementGeneration();
         }
         uint256 mintPrice = calculateMintPrice();
-        require(msg.value >= mintPrice, "Insufficient ETH send for minting.");
+        if (msg.value < mintPrice) revert TraitForgeNft__InsufficientETHSent();
 
         _mintInternal(msg.sender, mintPrice);
 
@@ -166,6 +180,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
             (bool refundSuccess,) = msg.sender.call{ value: excessPayment }("");
             require(refundSuccess, "Refund of excess payment failed.");
         }
+
+        _distributeFunds(mintPrice);
     }
 
     function mintWithBudget(
@@ -178,6 +194,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         nonReentrant
         onlyWhitelisted(proof, keccak256(abi.encodePacked(msg.sender)))
     {
+        if (minAmountMinted == 0) revert TraitForgeNft__MinAmountIsZero();
+
         uint256 amountMinted = 0;
         uint256 budgetLeft = msg.value;
 
@@ -185,6 +203,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         if (generationMintCounts[currentGeneration] == maxTokensPerGen) {
             _incrementGeneration();
         }
+        uint256 budgetSpent = 0;
         uint256 mintPrice = calculateMintPrice();
         while (budgetLeft >= mintPrice) {
             // L04
@@ -195,15 +214,18 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
             _mintInternal(msg.sender, mintPrice);
             amountMinted++;
             budgetLeft -= mintPrice;
+            budgetSpent += mintPrice;
             mintPrice = calculateMintPrice();
         }
 
-        if (amountMinted < minAmountMinted) revert NotEnoughTokensMinted(); // M04 L03
+        if (amountMinted < minAmountMinted) revert TraitForgeNft__NotEnoughTokensMinted(); // M04 L03
 
         if (budgetLeft > 0) {
             (bool refundSuccess,) = msg.sender.call{ value: budgetLeft }("");
             require(refundSuccess, "Refund failed.");
         }
+
+        if (budgetSpent > 0) _distributeFunds(budgetSpent);
 
         emit MintedWithBudget(msg.sender, amountMinted, msg.value, budgetLeft); // L03
     }
@@ -295,10 +317,9 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         }
 
         emit Minted(msg.sender, newItemId, currentGeneration, entropyValue, mintPrice);
-
-        _distributeFunds(mintPrice);
     }
 
+    /// TODO possibility to merge with _mintInternal same logic
     function _mintNewEntity(address newOwner, uint256 entropy, uint256 gen) private returns (uint256) {
         require(generationMintCounts[gen] < maxTokensPerGen, "Exceeds maxTokensPerGen");
 
@@ -329,25 +350,25 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
     function _incrementGeneration() private {
         // Not needed as is the sine qua non of the function and is in private context
         require(generationMintCounts[currentGeneration] == maxTokensPerGen, "Generation limit not yet reached");
-        require(currentGeneration < maxGeneration, "Max generation reached");
+        if (currentGeneration == maxGeneration) revert TraitForgeNft__MaxGenerationReached();
         currentGeneration++;
-        require(currentGeneration <= maxGeneration, "Maximum generation reached");
+        // require(currentGeneration <= maxGeneration, "Maximum generation reached"); // check not needed
         hasGoldenGodbeenMinted = false;
-        priceIncrement = priceIncrement + priceIncrementByGen;
+        priceIncrement += priceIncrementByGen;
         IEntropyGenerator entropyGenerator = _getEntropyGenerator();
         entropyGenerator.initializeAlphaIndices();
         emit GenerationIncremented(currentGeneration);
     }
 
     // distributes funds to nukeFund contract, where its then distrubted 10% dev 90% nukeFund
-    function _distributeFunds(uint256 totalAmount) private {
-        require(address(this).balance >= totalAmount, "Insufficient balance");
+    function _distributeFunds(uint256 amount) private {
+        require(address(this).balance >= amount, "Insufficient balance");
 
         address nukeFundAddress = _getNukeFundAddress();
-        (bool success,) = nukeFundAddress.call{ value: totalAmount }("");
+        (bool success,) = nukeFundAddress.call{ value: amount }("");
         require(success, "ETH send failed");
 
-        emit FundsDistributedToNukeFund(nukeFundAddress, totalAmount);
+        emit FundsDistributedToNukeFund(nukeFundAddress, amount);
     }
 
     function _beforeTokenTransfer(

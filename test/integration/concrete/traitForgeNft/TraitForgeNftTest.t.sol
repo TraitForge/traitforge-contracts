@@ -17,14 +17,15 @@ contract TraitForgeNftTest is Deploys {
     event FundsDistributedToNukeFund(address indexed to, uint256 amount);
     event NukeFundContractUpdated(address nukeFundAddress);
 
-    address public owner = makeAddr("owner");
+    address public user = makeAddr("user");
 
-    function setUp() public override virtual {
+    function setUp() public virtual override {
         super.setUp();
+        deal(user, 1_000_000 ether);
     }
 
-    function _deactivateWhitelist() internal {
-        vm.prank(_protocolMaintainer);
-        _traitForgeNft.setWhitelistEndTime(0);
+    function _skipWhitelistTime() internal {
+        uint256 _endWhitheListTimestamp = _traitForgeNft.whitelistEndTime();
+        skip(_endWhitheListTimestamp + 1);
     }
 }

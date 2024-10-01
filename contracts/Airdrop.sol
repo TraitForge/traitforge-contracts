@@ -24,7 +24,22 @@ contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable
     uint256 public totalTokenAmount;
     uint256 public totalValue;
 
+    uint256 public totalReferredMints;
+    uint256 public tokensToClaim;
+    uint256 public tokensToClaimAsReferrer;
+
+    address public liquidityPoolAddress;
+    address public devAddress;
+    address[] public partnerAddresses;
+    address[] public referralAddresses;
+
+    uint256 public liquidityPoolPercent = 10;
+    uint256 public devPercent = 15;
+    uint256 public referralPercent = 15;
+    uint256 public playersPercent = 55;
+
     mapping(address => uint256) public userInfo;
+    mapping(address => uint256) public referralInfo;
 
     // Errors
     error Airdrop__AlreadyStarted();
@@ -33,6 +48,7 @@ contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable
     error Airdrop__AlreadyAllowed();
     error Airdrop__NotEligible();
     error Airdrop__AddressZero();
+    error Airdrop__NothingToClaim();
 
     // Functions
 
@@ -52,6 +68,7 @@ contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable
         started = true;
         totalTokenAmount = amount;
         _getTraitToken().transferFrom(msg.sender, address(this), amount);
+        distributeTokens(amount);
     }
 
     function allowDaoFund() external onlyAirdropAccessor {
@@ -82,6 +99,22 @@ contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable
         userInfo[msg.sender] = 0;
     }
 
+    function claimAsReferrer() external whenNotPaused nonReentrant {
+        if (!started) revert Airdrop__NotStarted();
+        if (tokensToClaimAsReferrer == 0) revert Airdrop__NothingToClaim();
+        if (referralInfo[msg.sender] == 0) revert Airdrop__NotEligible();
+
+        uint256 amount = (tokensToClaimAsReferrer * referralInfo[msg.sender]) / totalReferredMints;
+        _getTraitToken().transfer(msg.sender, amount);
+        referralInfo[msg.sender] = 0;
+    }
+
+    function addReferralInfo(address referrer, uint256 mints) external whenNotPaused onlyAirdropAccessor {
+        if (started) revert Airdrop__AlreadyStarted();
+        referralInfo[referrer] += mints;
+        totalReferredMints += mints;
+    }
+
     function pause() public onlyProtocolMaintainer {
         _pause();
     }
@@ -102,6 +135,29 @@ contract Airdrop is IAirdrop, AddressProviderResolver, ReentrancyGuard, Pausable
     /**
      * internal & private *******************************************
      */
+    function distributeTokens(uint256 totalSupply) internal {
+        uint256 liquidityPoolShare = (totalSupply * liquidityPoolPercent) / 100;
+        uint256 devShare = (totalSupply * devPercent) / 100;
+        uint256 playersShare = (totalSupply * playersPercent) / 100;
+        uint256 referralShare = (totalSupply * referralPercent) / 100;
+        uint256 partnersShare =
+            (totalSupply - liquidityPoolShare - devShare - playersShare - referralShare) / partnerAddresses.length;
+
+        // Distribute to liquidity pool and dev address
+        IERC20 trait = _getTraitToken();
+        trait.transfer(liquidityPoolAddress, liquidityPoolShare);
+        trait.transfer(devAddress, devShare);
+
+        // Store the amount allocated to players
+        tokensToClaim = playersShare;
+        tokensToClaimAsReferrer = referralShare;
+
+        // Distribute to partners
+        for (uint256 i = 0; i < partnerAddresses.length; i++) {
+            trait.transfer(partnerAddresses[i], partnersShare);
+        }
+    }
+
     function _getTraitToken() private view returns (IERC20) {
         return IERC20(_addressProvider.getTrait());
     }
