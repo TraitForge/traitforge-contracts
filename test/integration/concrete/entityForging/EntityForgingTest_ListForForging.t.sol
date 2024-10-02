@@ -17,16 +17,14 @@ contract EntityForgingTest_ListForForging is EntityForgingTest {
     }
 
     function testRevert_entityForging_listForForging_whenTokenAlreadyListed() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
-        uint256 price = _traitForgeNft.calculateMintPrice();
-        vm.startPrank(user);
-        _traitForgeNft.mintToken{ value: price }(proofs);
+        _mintNFTs(user, 1000);
+        uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
 
-        _entityForging.listForForging(1, fee);
+        vm.startPrank(user);
+        _entityForging.listForForging(forgerId, fee);
 
         vm.expectRevert(EntityForging.EntityForging__TokenAlreadyListed.selector);
-        _entityForging.listForForging(1, fee);
+        _entityForging.listForForging(forgerId, fee);
     }
 
     function testRevert_entityForging_listForForging_whenCallerNotOwner() public {
@@ -54,21 +52,19 @@ contract EntityForgingTest_ListForForging is EntityForgingTest {
     }
 
     function test_entityForging_listForForging() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
-        uint256 price = _traitForgeNft.calculateMintPrice();
-        vm.startPrank(user);
-        _traitForgeNft.mintToken{ value: price }(proofs);
+        _mintNFTs(user, 1000);
+        uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
 
-        _entityForging.listForForging(1, fee);
+        vm.startPrank(user);
+        _entityForging.listForForging(forgerId, fee);
         uint256 listingCount = _entityForging.listingCount();
         EntityForging.Listing memory listing = _entityForging.getListings(listingCount);
 
         assertEq(listingCount, 1);
         assertEq(listing.account, user);
-        assertEq(listing.tokenId, 1);
+        assertEq(listing.tokenId, forgerId);
         assertEq(listing.isListed, true);
         assertEq(listing.fee, fee);
-        assertEq(_entityForging.listedTokenIds(1), listingCount);
+        assertEq(_entityForging.listedTokenIds(forgerId), listingCount);
     }
 }

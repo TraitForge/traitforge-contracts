@@ -23,103 +23,117 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
     }
 
     function testRevert_entityForging_forgeWithListed_whenMergerTokenIdIsZero() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
-        uint256 price = _traitForgeNft.calculateMintPrice();
+        _mintNFTs(user, 10);
+        uint256 forgerId = _getTheNthForgerId(0, 10, 1);
+
         vm.startPrank(user);
-        _traitForgeNft.mintToken{ value: price }(proofs);
-        _entityForging.listForForging(1, fee);
+        _entityForging.listForForging(forgerId, fee);
 
         vm.expectRevert(EntityForging.EntityForging__MergerTokenIdIsZero.selector);
-        _entityForging.forgeWithListed(1, 0);
+        _entityForging.forgeWithListed(forgerId, 0);
     }
 
     function testRevert_entityForging_forgeWithListed_whenMergerTokenIdNotOwnByCaller() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
-        uint256 price1 = _traitForgeNft.calculateMintPrice();
-        vm.startPrank(user);
-        _traitForgeNft.mintToken{ value: price1 }(proofs);
-        _entityForging.listForForging(1, fee);
-        vm.stopPrank();
+        _mintNFTs(user, 4000); // mint first 10 tokens to user
+        uint256 forgerId = _getTheNthForgerId(0, 4000, 1);
 
-        uint256 price2 = _traitForgeNft.calculateMintPrice();
-        vm.prank(otherUser);
-        _traitForgeNft.mintToken{ value: price2 }(proofs);
+        vm.prank(user);
+        _entityForging.listForForging(forgerId, fee);
+
+        _mintNFTs(otherUser, 4000); // mint next 10 tokens to otherUser
+        uint256 mergerId = _getTheNthMergerId(4000, 8000, 1);
 
         vm.prank(user);
         vm.expectRevert(EntityForging.EntityForging__MergerTokenNotOwnedByCaller.selector);
-        _entityForging.forgeWithListed(1, 2);
+        _entityForging.forgeWithListed(forgerId, mergerId);
     }
 
     function testRevert_entityForging_forgeWithListed_whenTokensNotSameGeneration() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
         uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
-        for (uint256 i = 0; i < maxTokensPerGen; i++) {
-            uint256 price = _traitForgeNft.calculateMintPrice();
-            vm.prank(user);
-            _traitForgeNft.mintToken{ value: price }(proofs);
-        }
+        _mintNFTs(user, maxTokensPerGen * 2);
+        uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
         vm.prank(user);
-        _entityForging.listForForging(1, fee);
+        _entityForging.listForForging(forgerId, fee);
 
-        uint256 price1 = _traitForgeNft.calculateMintPrice();
-        vm.prank(user);
-        _traitForgeNft.mintToken{ value: price1 }(proofs);
+        uint256 mergerId = _getTheNthMergerId(maxTokensPerGen, maxTokensPerGen * 2, 1);
 
         vm.prank(user);
         vm.expectRevert(EntityForging.EntityForging__TokensNotSameGeneration.selector);
-        _entityForging.forgeWithListed(1, 10_001);
+        _entityForging.forgeWithListed(forgerId, mergerId);
     }
 
     function testRevert_entityForging_forgeWithListed_whenFeeMismatchWithEthSent() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
-        uint256 price1 = _traitForgeNft.calculateMintPrice();
+        uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
+        _mintNFTs(user, maxTokensPerGen);
+        uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
+
         vm.startPrank(user);
-        _traitForgeNft.mintToken{ value: price1 }(proofs);
-        _entityForging.listForForging(1, fee);
+        _entityForging.listForForging(forgerId, fee);
 
-        uint256 price2 = _traitForgeNft.calculateMintPrice();
-        _traitForgeNft.mintToken{ value: price2 }(proofs);
-
+        uint256 mergerId = _getTheNthMergerId(0, maxTokensPerGen, 1);
         vm.expectRevert(EntityForging.EntityForging__FeeMismatchWithEthSent.selector);
-        _entityForging.forgeWithListed{ value: fee + 1 }(1, 2);
+        _entityForging.forgeWithListed{ value: fee + 1 }(forgerId, mergerId);
     }
 
     function testRevert_entityForging_forgeWithListed_whenTokensAlreadyForged() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
-        uint256 price1 = _traitForgeNft.calculateMintPrice();
+        uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
+        _mintNFTs(user, maxTokensPerGen);
+        uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
+        uint256 mergerId = _getTheNthMergerId(0, maxTokensPerGen, 1);
+
         vm.startPrank(user);
-        _traitForgeNft.mintToken{ value: price1 }(proofs);
-        _entityForging.listForForging(1, fee);
-
-        uint256 price2 = _traitForgeNft.calculateMintPrice();
-        _traitForgeNft.mintToken{ value: price2 }(proofs);
-
-        _entityForging.forgeWithListed{ value: fee }(1, 2);
-        _entityForging.listForForging(1, fee);
+        _entityForging.listForForging(forgerId, fee);
+        _entityForging.forgeWithListed{ value: fee }(forgerId, mergerId);
+        _entityForging.listForForging(forgerId, fee);
 
         vm.expectRevert(EntityForging.EntityForging__TokensAlreadyForged.selector);
-        _entityForging.forgeWithListed{ value: fee }(1, 2);
+        _entityForging.forgeWithListed{ value: fee }(forgerId, mergerId);
     }
 
     function testRevert_entityForging_forgeWithListed_whenMergerIdEntropyCannotMerge() public {
-        _skipWhitelistTime();
-        bytes32[] memory proofs = new bytes32[](0);
-        uint256 price1 = _traitForgeNft.calculateMintPrice();
-        vm.startPrank(user);
-        _traitForgeNft.mintToken{ value: price1 }(proofs);
-        _entityForging.listForForging(1, fee);
+        uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
+        _mintNFTs(user, maxTokensPerGen);
+        uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
+        uint256 secondForgerId = _getTheNthForgerId(0, maxTokensPerGen, 2);
 
-        for (uint256 i = 0; i < 3; i++) {
-            uint256 price = _traitForgeNft.calculateMintPrice();
-            _traitForgeNft.mintToken{ value: price }(proofs);
-        }
+        vm.startPrank(user);
+        _entityForging.listForForging(forgerId, fee);
 
         vm.expectRevert(EntityForging.EntityForging__MergerEntropyCannotMerge.selector);
-        _entityForging.forgeWithListed{ value: fee }(1, 4); // the entropy of token 4 is not a merger
+        _entityForging.forgeWithListed{ value: fee }(forgerId, secondForgerId);
+    }
+
+    function testRevert_entityForging_forgeWithListed_whenInsufficientMergerForgePotential() public {
+        uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
+        _mintNFTs(user, maxTokensPerGen);
+        uint256 mergerId = _getTheNthMergerId(0, maxTokensPerGen, 1);
+        uint256[] memory forgerIds = new uint256[](10);
+        for (uint256 i; forgerIds.length > i; i++) {
+            forgerIds[i] = _getTheNthForgerId(0, maxTokensPerGen, i + 1);
+            vm.prank(user);
+            _entityForging.listForForging(_getTheNthForgerId(0, maxTokensPerGen, i + 1), fee);
+        }
+
+        for (uint256 i = 0; i < forgerIds.length; i++) {
+            uint8 mergerForgePotential = uint8((_traitForgeNft.getTokenEntropy(mergerId) / 10) % 10);
+            if (!(mergerForgePotential > 0 && _entityForging.forgingCounts(mergerId) + 1 <= mergerForgePotential)) {
+                vm.expectRevert(EntityForging.EntityForging__InsufficientMergerForgePotential.selector);
+            }
+            vm.prank(user);
+            _entityForging.forgeWithListed{ value: fee }(forgerIds[i], mergerId);
+        }
+    }
+
+    function test_entityForging_forgeWithListed() public {
+        _mintNFTs(user, 1000);
+        uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
+        uint256 mergerId = _getTheNthMergerId(0, 1000, 1);
+        vm.startPrank(user);
+        _entityForging.listForForging(forgerId, fee);
+        uint256 forgedTokenId = _entityForging.forgeWithListed{ value: fee }(forgerId, mergerId);
+
+        assertEq(_traitForgeNft.getTokenGeneration(forgedTokenId), 2);
+        assertEq(_entityForging.forgingCounts(forgerId), 1);
+        assertEq(_entityForging.forgingCounts(mergerId), 1);
     }
 }

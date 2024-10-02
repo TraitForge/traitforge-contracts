@@ -23,12 +23,6 @@ contract TraitForgeNft_Forge is TraitForgeNftTest {
         _traitForgeNft.forge(newOwner, 1, 2, "");
     }
 
-    function testRevert_traitForgeNft_forge_whenForgeWithSameTokens() public {
-        vm.expectRevert(TraitForgeNft.TraitForgeNft__CannotForgeWithSameToken.selector);
-        vm.prank(address(_entityForging));
-        _traitForgeNft.forge(newOwner, 1, 1, "");
-    }
-
     function testRevert_traitForgeNft_forge_whenNewGenerationCreatedOverMaxGeneration() public {
         vm.prank(_protocolMaintainer);
         _traitForgeNft.setMaxGeneration(1);

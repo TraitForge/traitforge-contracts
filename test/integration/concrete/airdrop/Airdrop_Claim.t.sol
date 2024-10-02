@@ -6,7 +6,7 @@ import { Airdrop } from "contracts/Airdrop.sol";
 
 contract Airdrop_Claim is AirdropTest {
     address user = makeAddr("user");
-    uint256 amountToAdd = 10 ether;
+    uint256 amountToAdd = 1 ether;
 
     function testRevert_when_not_started() public {
         vm.expectRevert(Airdrop.Airdrop__NotStarted.selector);

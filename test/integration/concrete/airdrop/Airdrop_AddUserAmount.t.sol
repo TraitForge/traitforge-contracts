@@ -11,7 +11,6 @@ contract Airdrop_AddUserAmount is AirdropTest {
     address user = makeAddr("user");
 
     function testRevert__airdrop__addUserAmount__whenNotAuthorized() public {
-        _startAirdrop();
         vm.expectRevert(abi.encodeWithSelector(Errors.CallerNotAirdropAccessor.selector, _randomUser));
         vm.prank(_randomUser);
         _airdrop.addUserAmount(user, 100);

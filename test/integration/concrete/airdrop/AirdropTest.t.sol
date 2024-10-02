@@ -5,7 +5,7 @@ import { Deploys } from "test/shared/Deploys.sol";
 import { Roles } from "contracts/libraries/Roles.sol";
 
 contract AirdropTest is Deploys {
-    address internal _airdropAccessor = makeAddr("airdropAccessor");
+    address internal _airdropAccessor = makeAddr("_airdropAccessor");
     uint256 internal amount = 1_000_000 ether;
 
     function setUp() public virtual override {
@@ -17,9 +17,9 @@ contract AirdropTest is Deploys {
     function _startAirdrop() internal {
         vm.prank(_traitMinter);
         _trait.transfer(_airdropAccessor, amount);
-        vm.prank(_airdropAccessor);
+        vm.startPrank(_airdropAccessor);
         _trait.approve(address(_airdrop), amount);
-        vm.prank(_airdropAccessor);
         _airdrop.startAirdrop(amount);
+        vm.stopPrank();
     }
 }

@@ -20,7 +20,7 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
 
     constructor(address addressProvider) AddressProviderResolver(addressProvider) {
         _writeEntropyBatch(); // M05
-        initializeAlphaIndices();
+        _initializeAlphaIndices();
     }
 
     function nextEntropy() public onlyEntropyAccessor returns (uint256) {
@@ -45,13 +45,7 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
 
     // Select index points for 999999, triggered each generation increment
     function initializeAlphaIndices() public onlyEntropyAccessor {
-        uint256 hashValue = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp)));
-
-        uint256 slotIndexSelection = (hashValue % 258) + 612;
-        uint256 numberIndexSelection = hashValue % 12;
-
-        slotIndexSelectionPoint = slotIndexSelection;
-        numberIndexSelectionPoint = numberIndexSelection;
+        _initializeAlphaIndices();
     }
 
     // Public function to expose entropy calculation for a given slot and number index
@@ -117,5 +111,15 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
             entropySlots[i] = pseudoRandomValue; // store the value in the slots array
         }
         lastInitializedIndex = endIndex; // Update the index to indicate initialization is complete
+    }
+
+    function _initializeAlphaIndices() private {
+        uint256 hashValue = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp)));
+
+        uint256 slotIndexSelection = (hashValue % 258) + 612;
+        uint256 numberIndexSelection = hashValue % 12;
+
+        slotIndexSelectionPoint = slotIndexSelection;
+        numberIndexSelectionPoint = numberIndexSelection;
     }
 }

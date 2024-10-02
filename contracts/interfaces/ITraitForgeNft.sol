@@ -52,7 +52,7 @@ interface ITraitForgeNft is IERC721Enumerable {
         external
         returns (uint256);
 
-    function mintToken(bytes32[] calldata proof) external payable;
+    function mintToken(bytes32[] calldata proof) external payable returns (uint256);
 
     function mintWithBudget(bytes32[] calldata proof, uint256 minAmountMinted) external payable;
 

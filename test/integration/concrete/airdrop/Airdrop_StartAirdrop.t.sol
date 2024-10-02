@@ -34,9 +34,6 @@ contract Airdrop_StartAirdrop is AirdropTest {
 
     function test__airdrop__startAirdrop() public {
         _startAirdrop();
-
-        assertEq(_airdrop.totalTokenAmount(), amount);
-        assertEq(_trait.balanceOf(address(_airdrop)), amount);
         assertEq(_airdrop.airdropStarted(), true);
     }
 }

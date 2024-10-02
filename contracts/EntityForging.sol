@@ -35,7 +35,6 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     error EntityForging__TokenAlreadyListed();
     error EntityForging__TokenNotOwnedByCaller();
     error EntityForging__FeeTooLow();
-    error EntityForging__ForgingLimitReached();
     error EntityForging__NotForger();
     error EntityForging__MergerTokenIdIsZero();
     error EntityForging__ForgerTokenIdNotListed();
@@ -44,7 +43,9 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     error EntityForging__TokensAlreadyForged();
     error EntityForging__FeeMismatchWithEthSent();
     error EntityForging__MergerEntropyCannotMerge();
-    error EntityForging__InsufficientForgePotential();
+    error EntityForging__InsufficientForgerForgePotential();
+    error EntityForging__InsufficientMergerForgePotential();
+    error EntityForging__TokenNotListedForForging(uint256 tokenId);
 
     // Functions
 
@@ -87,13 +88,14 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         _resetForgingCountIfNeeded(tokenId);
 
         uint256 entropy = traitForgeNft.getTokenEntropy(tokenId); // Retrieve entropy for tokenId
+
+        bool isForger = (entropy % 3) == 0; // Determine if the token is a forger need to keep the logic somewhere else
+        if (!isForger) revert EntityForging__NotForger();
+
         uint8 forgePotential = uint8((entropy / 10) % 10); // Extract the 5th digit from the entropy
         if (!(forgePotential > 0 && forgingCounts[tokenId] < forgePotential)) {
-            revert EntityForging__ForgingLimitReached();
+            revert EntityForging__InsufficientForgerForgePotential();
         }
-
-        bool isForger = (entropy % 3) == 0; // Determine if the token is a forger based on entropy
-        if (!isForger) revert EntityForging__NotForger(); // TODO need to mock the entropyGenerator
 
         ++listingCount;
         listings[listingCount] = Listing(msg.sender, tokenId, true, fee);
@@ -136,7 +138,7 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         uint8 mergerForgePotential = uint8((mergerEntropy / 10) % 10); // Extract the 5th digit from the entropy
         forgingCounts[mergerId]++;
         if (!(mergerForgePotential > 0 && forgingCounts[mergerId] <= mergerForgePotential)) {
-            revert EntityForging__InsufficientForgePotential();
+            revert EntityForging__InsufficientMergerForgePotential();
         }
         /// TODO Stack too deep
         // uint256 devShare = (msg.value * taxCut) / BPS;
@@ -165,11 +167,10 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
 
     function cancelListingForForging(uint256 tokenId) external whenNotPaused nonReentrant {
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        require(
-            traitForgeNft.ownerOf(tokenId) == msg.sender || msg.sender == address(traitForgeNft),
-            "Caller must own the token"
-        );
-        require(listings[listedTokenIds[tokenId]].isListed, "Token not listed for forging");
+        if (!(traitForgeNft.ownerOf(tokenId) == msg.sender || msg.sender == address(traitForgeNft))) {
+            revert EntityForging__TokenNotOwnedByCaller();
+        }
+        if (!listings[listedTokenIds[tokenId]].isListed) revert EntityForging__TokenNotListedForForging(tokenId);
 
         _cancelListingForForging(tokenId);
     }

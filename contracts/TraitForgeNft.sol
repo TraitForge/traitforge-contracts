@@ -138,8 +138,6 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         onlyEntityForging
         returns (uint256)
     {
-        // TODO check if both parents are valid (already minted) meaning parentId1 and parentId2 are not 0 && both < _tokenIds
-        // if (parent1Id == parent2Id) revert TraitForgeNft__CannotForgeWithSameToken();
         uint256 newGeneration = getTokenGeneration(parent1Id) + 1;
 
         /// Check new generation is not over maxGeneration
@@ -166,6 +164,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         whenNotPaused
         nonReentrant
         onlyWhitelisted(proof, keccak256(abi.encodePacked(msg.sender)))
+        returns (uint256)
     {
         if (generationMintCounts[currentGeneration] == maxTokensPerGen) {
             _incrementGeneration();
@@ -173,7 +172,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         uint256 mintPrice = calculateMintPrice();
         if (msg.value < mintPrice) revert TraitForgeNft__InsufficientETHSent();
 
-        _mintInternal(msg.sender, mintPrice);
+        uint256 tokenId = _mintInternal(msg.sender, mintPrice);
 
         uint256 excessPayment = msg.value - mintPrice;
         if (excessPayment > 0) {
@@ -182,6 +181,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         }
 
         _distributeFunds(mintPrice);
+
+        return tokenId;
     }
 
     function mintWithBudget(
@@ -293,7 +294,7 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
     //////////////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////// write functions /////////////////////////////////
-    function _mintInternal(address to, uint256 mintPrice) internal {
+    function _mintInternal(address to, uint256 mintPrice) internal returns (uint256) {
         _tokenIds++;
         uint256 newItemId = _tokenIds;
         _mint(to, newItemId);
@@ -317,6 +318,8 @@ contract TraitForgeNft is ITraitForgeNft, AddressProviderResolver, ERC721Enumera
         }
 
         emit Minted(msg.sender, newItemId, currentGeneration, entropyValue, mintPrice);
+
+        return newItemId;
     }
 
     /// TODO possibility to merge with _mintInternal same logic

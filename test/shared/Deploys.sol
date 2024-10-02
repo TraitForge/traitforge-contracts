@@ -21,6 +21,7 @@ contract Deploys is Test {
     address internal _protocolMaintainer = makeAddr("protocolMaintainer");
     address internal _traitMinter = makeAddr("traitMinter");
     address internal _randomUser = makeAddr("_randomUser");
+    address internal _partner = makeAddr("_partner");
 
     AddressProvider internal _addressProvider;
     Airdrop internal _airdrop;
@@ -55,8 +56,16 @@ contract Deploys is Test {
 
     function _deployAirdrop() private {
         _airdrop = new Airdrop(address(_addressProvider));
-        vm.prank(_protocolMaintainer);
+        address[] memory partners = new address[](1);
+        partners[0] = _partner;
+        address liquidityPoolAddress = makeAddr("liquidityPoolAddress");
+        address devAddress = makeAddr("devAddress");
+        vm.startPrank(_protocolMaintainer);
         _addressProvider.setAirdrop(address(_airdrop));
+        _airdrop.setPartnerAddresses(partners);
+        _airdrop.setLiquidityPoolAddress(liquidityPoolAddress);
+        _airdrop.setDevAddress(devAddress);
+        vm.stopPrank();
     }
 
     function _deployDAOFund() private {
