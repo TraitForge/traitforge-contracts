@@ -175,7 +175,7 @@ contract NukeFund is INukeFund, ReentrancyGuard, Ownable, Pausable {
       : potentialClaimAmount;
 
     fund -= claimAmount; // Deduct the claim amount from the fund
-    uint256 entropy = TraitForgeNft.getTokenEntropy(tokenId);
+    uint256 entropy = nftContract.getTokenEntropy(tokenId);
     nftContract.burn(tokenId); // Burn the token
     (bool success, ) = payable(msg.sender).call{ value: claimAmount }('');
     require(success, 'Failed to send Ether');
