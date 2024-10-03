@@ -21,6 +21,7 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     uint256 public nukeFactorMaxParam = MAX_DENOMINATOR / 2;
     uint256 public minimumDaysHeld = 3 days;
     address public ethCollector;
+    uint256 public initNukeFactorDivisor = 100;
 
     // Events
 
@@ -31,6 +32,7 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     error NukeFund__ContractNotApproved();
     error NukeFund__TokenNotMature();
     error NukeFund__AddressIsZero();
+    error NukeFund__DivisorIsZero();
 
     // Modifiers
 
@@ -70,12 +72,12 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     }
 
     function nuke(uint256 tokenId) public whenNotPaused nonReentrant {
-        ITraitForgeNft nftContract = _getTraitForgeNft();
-        if (nftContract.ownerOf(tokenId) != msg.sender) revert NukeFund__CallerNotTokenOwner();
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+        if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert NukeFund__CallerNotTokenOwner();
         if (
             !(
-                nftContract.getApproved(tokenId) == address(this)
-                    || nftContract.isApprovedForAll(msg.sender, address(this))
+                traitForgeNft.getApproved(tokenId) == address(this)
+                    || traitForgeNft.isApprovedForAll(msg.sender, address(this))
             )
         ) revert NukeFund__ContractNotApproved();
         if (!canTokenBeNuked(tokenId)) revert NukeFund__TokenNotMature();
@@ -91,7 +93,7 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
 
         fund -= claimAmount; // Deduct the claim amount from the fund
 
-        nftContract.burn(tokenId); // Burn the token
+        traitForgeNft.burn(tokenId); // Burn the token
         (bool success,) = payable(msg.sender).call{ value: claimAmount }("");
         require(success, "Failed to send Ether");
 
@@ -128,6 +130,11 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         nukeFactorMaxParam = value;
     }
 
+    function setInitNukeFactorDivisor(uint256 value) external onlyProtocolMaintainer {
+        if (value == 0) revert NukeFund__DivisorIsZero();
+        initNukeFactorDivisor = value;
+    }
+
     // View function to see the current balance of the fund
     function getFundBalance() public view returns (uint256) {
         return fund;
@@ -135,13 +142,13 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
 
     // Calculate the age of a token based on its creation timestamp and current time
     function calculateAge(uint256 tokenId) public view returns (uint256) {
-        ITraitForgeNft nftContract = _getTraitForgeNft();
-        if (nftContract.ownerOf(tokenId) == address(0)) revert NukeFund__TokenOwnerIsAddressZero();
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+        if (traitForgeNft.ownerOf(tokenId) == address(0)) revert NukeFund__TokenOwnerIsAddressZero();
 
-        uint256 perfomanceFactor = nftContract.getTokenEntropy(tokenId) % 10;
+        uint256 perfomanceFactor = traitForgeNft.getTokenEntropy(tokenId) % 10;
 
         uint256 age = (
-            perfomanceFactor * MAX_DENOMINATOR * (block.timestamp - nftContract.getTokenCreationTimestamp(tokenId))
+            perfomanceFactor * MAX_DENOMINATOR * (block.timestamp - traitForgeNft.getTokenCreationTimestamp(tokenId))
                 / (60 * 60 * 24 * 365)
         );
         return age;
@@ -149,13 +156,13 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
 
     // Calculate the nuke factor of a token, which affects the claimable amount from the fund
     function calculateNukeFactor(uint256 tokenId) public view returns (uint256) {
-        ITraitForgeNft nftContract = _getTraitForgeNft();
-        if (nftContract.ownerOf(tokenId) == address(0)) revert NukeFund__TokenOwnerIsAddressZero();
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+        if (traitForgeNft.ownerOf(tokenId) == address(0)) revert NukeFund__TokenOwnerIsAddressZero();
 
-        uint256 entropy = nftContract.getTokenEntropy(tokenId);
+        uint256 entropy = traitForgeNft.getTokenEntropy(tokenId);
         uint256 adjustedAge = calculateAge(tokenId);
 
-        uint256 initialNukeFactor = entropy / 40; // calcualte initalNukeFactor based on entropy, 5 digits
+        uint256 initialNukeFactor = entropy / initNukeFactorDivisor; // calcualte initalNukeFactor based on entropy, 5 digits
 
         uint256 finalNukeFactor = ((adjustedAge * defaultNukeFactorIncrease) / MAX_DENOMINATOR) + initialNukeFactor; // CONSIDER
             // USING DYNAMIC INCREASE BY ENTROPY INSTEAD OF DEFAULT
@@ -164,10 +171,10 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     }
 
     function canTokenBeNuked(uint256 tokenId) public view returns (bool) {
-        ITraitForgeNft nftContract = _getTraitForgeNft();
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         // Ensure the token exists
-        if (nftContract.ownerOf(tokenId) == address(0)) revert NukeFund__TokenOwnerIsAddressZero();
-        uint256 tokenAgeInSeconds = block.timestamp - nftContract.getTokenLastTransferredTimestamp(tokenId);
+        if (traitForgeNft.ownerOf(tokenId) == address(0)) revert NukeFund__TokenOwnerIsAddressZero();
+        uint256 tokenAgeInSeconds = block.timestamp - traitForgeNft.getTokenLastTransferredTimestamp(tokenId);
         // Assuming tokenAgeInSeconds is the age of the token since it's holding the nft, check if it's over minimum
         // days held
         return tokenAgeInSeconds >= minimumDaysHeld;

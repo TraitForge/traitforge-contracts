@@ -17,7 +17,7 @@ contract EntityForgingTest_CancelListingForForging is EntityForgingTest {
     }
 
     function testRevert_entityForging_cancelListingForForging_whenCallerNotTokenOwner() public {
-        _mintNFTs(user, 10);
+        _mintTraitForgeNft(user, 10);
         // we grab the first forger token id
         uint256 forgerId = _getTheNthForgerId(0, 10, 1);
 
@@ -27,7 +27,7 @@ contract EntityForgingTest_CancelListingForForging is EntityForgingTest {
     }
 
     function testRevert_entityForging_cancelListingForForging_whenTokenNotListed() public {
-        _mintNFTs(user, 10);
+        _mintTraitForgeNft(user, 10);
         uint256 forgerId = _getTheNthForgerId(0, 10, 1);
 
         vm.prank(user);
@@ -38,7 +38,7 @@ contract EntityForgingTest_CancelListingForForging is EntityForgingTest {
     }
 
     function test_entityForging_cancelListingForForging() public {
-        _mintNFTs(user, 10);
+        _mintTraitForgeNft(user, 10);
         uint256 forgerId = _getTheNthForgerId(0, 10, 1);
 
         vm.startPrank(user);

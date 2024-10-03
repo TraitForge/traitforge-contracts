@@ -23,7 +23,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
     }
 
     function testRevert_entityForging_forgeWithListed_whenMergerTokenIdIsZero() public {
-        _mintNFTs(user, 10);
+        _mintTraitForgeNft(user, 10);
         uint256 forgerId = _getTheNthForgerId(0, 10, 1);
 
         vm.startPrank(user);
@@ -34,13 +34,13 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
     }
 
     function testRevert_entityForging_forgeWithListed_whenMergerTokenIdNotOwnByCaller() public {
-        _mintNFTs(user, 4000); // mint first 10 tokens to user
+        _mintTraitForgeNft(user, 4000); // mint first 10 tokens to user
         uint256 forgerId = _getTheNthForgerId(0, 4000, 1);
 
         vm.prank(user);
         _entityForging.listForForging(forgerId, fee);
 
-        _mintNFTs(otherUser, 4000); // mint next 10 tokens to otherUser
+        _mintTraitForgeNft(otherUser, 4000); // mint next 10 tokens to otherUser
         uint256 mergerId = _getTheNthMergerId(4000, 8000, 1);
 
         vm.prank(user);
@@ -50,7 +50,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
 
     function testRevert_entityForging_forgeWithListed_whenTokensNotSameGeneration() public {
         uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
-        _mintNFTs(user, maxTokensPerGen * 2);
+        _mintTraitForgeNft(user, maxTokensPerGen * 2);
         uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
         vm.prank(user);
         _entityForging.listForForging(forgerId, fee);
@@ -64,7 +64,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
 
     function testRevert_entityForging_forgeWithListed_whenFeeMismatchWithEthSent() public {
         uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
-        _mintNFTs(user, maxTokensPerGen);
+        _mintTraitForgeNft(user, maxTokensPerGen);
         uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
 
         vm.startPrank(user);
@@ -77,7 +77,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
 
     function testRevert_entityForging_forgeWithListed_whenTokensAlreadyForged() public {
         uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
-        _mintNFTs(user, maxTokensPerGen);
+        _mintTraitForgeNft(user, maxTokensPerGen);
         uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
         uint256 mergerId = _getTheNthMergerId(0, maxTokensPerGen, 1);
 
@@ -92,7 +92,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
 
     function testRevert_entityForging_forgeWithListed_whenMergerIdEntropyCannotMerge() public {
         uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
-        _mintNFTs(user, maxTokensPerGen);
+        _mintTraitForgeNft(user, maxTokensPerGen);
         uint256 forgerId = _getTheNthForgerId(0, maxTokensPerGen, 1);
         uint256 secondForgerId = _getTheNthForgerId(0, maxTokensPerGen, 2);
 
@@ -105,7 +105,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
 
     function testRevert_entityForging_forgeWithListed_whenInsufficientMergerForgePotential() public {
         uint256 maxTokensPerGen = _traitForgeNft.maxTokensPerGen();
-        _mintNFTs(user, maxTokensPerGen);
+        _mintTraitForgeNft(user, maxTokensPerGen);
         uint256 mergerId = _getTheNthMergerId(0, maxTokensPerGen, 1);
         uint256[] memory forgerIds = new uint256[](10);
         for (uint256 i; forgerIds.length > i; i++) {
@@ -125,7 +125,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
     }
 
     function test_entityForging_forgeWithListed() public {
-        _mintNFTs(user, 1000);
+        _mintTraitForgeNft(user, 1000);
         uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
         uint256 mergerId = _getTheNthMergerId(0, 1000, 1);
         vm.startPrank(user);

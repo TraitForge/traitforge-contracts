@@ -17,7 +17,7 @@ contract EntityForgingTest_ListForForging is EntityForgingTest {
     }
 
     function testRevert_entityForging_listForForging_whenTokenAlreadyListed() public {
-        _mintNFTs(user, 1000);
+        _mintTraitForgeNft(user, 1000);
         uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
 
         vm.startPrank(user);
@@ -52,7 +52,7 @@ contract EntityForgingTest_ListForForging is EntityForgingTest {
     }
 
     function test_entityForging_listForForging() public {
-        _mintNFTs(user, 1000);
+        _mintTraitForgeNft(user, 1000);
         uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
 
         vm.startPrank(user);
