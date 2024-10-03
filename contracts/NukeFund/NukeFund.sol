@@ -22,6 +22,10 @@ contract NukeFund is INukeFund, ReentrancyGuard, Ownable, Pausable {
   uint256 public maxAllowedClaimDivisor = 2;
   uint256 public nukeFactorMaxParam = MAX_DENOMINATOR / 2;
   uint256 public minimumDaysHeld = 3 days;
+  uint256 public pauseHeight = 0;
+  uint256 public unpauseAt = 0;
+  uint256 public empDivisor = 10;
+  bool public isEMPActive = false;
 
   // Constructor now properly passes the initial owner address to the Ownable constructor
   constructor(
@@ -146,6 +150,10 @@ contract NukeFund is INukeFund, ReentrancyGuard, Ownable, Pausable {
   }
 
   function nuke(uint256 tokenId) public whenNotPaused nonReentrant {
+    if(isEMPActive){
+      require (block.number >= unpauseAt, "EMP is active, nuking is not possible"); // if EMPActive is true, check to see if it has finished its cycle
+      isEMPActive = false; // if it has surpassed its locked time, then set back to false
+    };
     require(
       nftContract.ownerOf(tokenId) == msg.sender,
       'ERC721: caller is not token owner'
@@ -167,11 +175,11 @@ contract NukeFund is INukeFund, ReentrancyGuard, Ownable, Pausable {
       : potentialClaimAmount;
 
     fund -= claimAmount; // Deduct the claim amount from the fund
-
+    uint256 entropy = TraitForgeNft.getTokenEntropy(tokenId);
     nftContract.burn(tokenId); // Burn the token
     (bool success, ) = payable(msg.sender).call{ value: claimAmount }('');
     require(success, 'Failed to send Ether');
-
+    checkEMP(entropy);
     emit Nuked(msg.sender, tokenId, claimAmount); // Emit the event with the actual claim amount
     emit FundBalanceUpdated(fund); // Update the fund balance
   }
@@ -187,4 +195,12 @@ contract NukeFund is INukeFund, ReentrancyGuard, Ownable, Pausable {
     // Assuming tokenAgeInSeconds is the age of the token since it's holding the nft, check if it's over minimum days held
     return tokenAgeInSeconds >= minimumDaysHeld;
   }
+}
+
+function checkEMP(uint256 entropy) public {
+    if (entropy % 10 == 7) {
+        isEMPActive = true; // sets EMPActive to true if the token is an emp
+        pauseHeight = block.number; // sets the starting index of pause
+        unpauseAt = pauseHeight + (entropy / empDivisor); // sets the end index of pause
+    }
 }
