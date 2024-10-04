@@ -37,7 +37,7 @@ deploy-accessController:
 
 deploy-addressProvider:
 	@echo "Deploying AddressProvider contract on $(NETWORK)..."
-	forge script script/deployment/01_DeployAddressProvider.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/01_DeployAddressProvider.s.sol --rpc-url $(NETWORK) --with-gas-price 600 --broadcast --verify --optimize
 
 deploy-all:
 	@echo "Deploying all contracts on $(NETWORK)..."
