@@ -23,6 +23,10 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     address public ethCollector;
     uint256 public initNukeFactorDivisor = 100;
 
+    uint256 public unpauseAt;
+    uint256 public empDivisor = 10;
+    bool public isEMPActive = false;
+
     // Events
 
     // Errors
@@ -33,6 +37,7 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     error NukeFund__TokenNotMature();
     error NukeFund__AddressIsZero();
     error NukeFund__DivisorIsZero();
+    error NukeFund__EmpIsActive();
 
     // Modifiers
 
@@ -72,6 +77,10 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     }
 
     function nuke(uint256 tokenId) public whenNotPaused nonReentrant {
+        if (isEMPActive) {
+            if (block.number < unpauseAt) revert NukeFund__EmpIsActive();
+            isEMPActive = false;
+        }
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert NukeFund__CallerNotTokenOwner();
         if (
@@ -96,6 +105,8 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         traitForgeNft.burn(tokenId); // Burn the token
         (bool success,) = payable(msg.sender).call{ value: claimAmount }("");
         require(success, "Failed to send Ether");
+
+        _activateEmpIfNeeded(tokenId);
 
         emit Nuked(msg.sender, tokenId, claimAmount); // Emit the event with the actual claim amount
         emit FundBalanceUpdated(fund); // Update the fund balance
@@ -135,6 +146,11 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         initNukeFactorDivisor = value;
     }
 
+    function setEmpDivisor(uint256 value) external onlyProtocolMaintainer {
+        if (value == 0) revert NukeFund__DivisorIsZero();
+        empDivisor = value;
+    }
+
     // View function to see the current balance of the fund
     function getFundBalance() public view returns (uint256) {
         return fund;
@@ -162,7 +178,8 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         uint256 entropy = traitForgeNft.getTokenEntropy(tokenId);
         uint256 adjustedAge = calculateAge(tokenId);
 
-        uint256 initialNukeFactor = entropy / initNukeFactorDivisor; // calcualte initalNukeFactor based on entropy, 5 digits
+        uint256 initialNukeFactor = entropy / initNukeFactorDivisor; // calcualte initalNukeFactor based on entropy, 5
+            // digits
 
         uint256 finalNukeFactor = ((adjustedAge * defaultNukeFactorIncrease) / MAX_DENOMINATOR) + initialNukeFactor; // CONSIDER
             // USING DYNAMIC INCREASE BY ENTROPY INSTEAD OF DEFAULT
@@ -178,6 +195,14 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         // Assuming tokenAgeInSeconds is the age of the token since it's holding the nft, check if it's over minimum
         // days held
         return tokenAgeInSeconds >= minimumDaysHeld;
+    }
+
+    function _activateEmpIfNeeded(uint256 tokenId) private {
+        uint256 entropy = _getTraitForgeNft().getTokenEntropy(tokenId);
+        if (entropy % 10 == 7) {
+            isEMPActive = true; // sets EMPActive to true if the token is an emp
+            unpauseAt = block.number + (entropy / empDivisor); // sets the end index of pause
+        }
     }
 
     function _getDevFundAddress() private view returns (address) {
