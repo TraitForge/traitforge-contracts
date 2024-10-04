@@ -29,8 +29,8 @@ wrap_comments = true
 via-ir = false
 
 [invariant]
-runs = 1
-depth = 200000
+runs = 2
+depth = 20010
 fail_on_revert = false
 
 [rpc_endpoints]

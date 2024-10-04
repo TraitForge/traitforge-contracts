@@ -54,4 +54,13 @@ contract NukeFundTest_Nuke is NukeFundTest {
         vm.expectRevert(NukeFund.NukeFund__EmpIsActive.selector);
         _nukeFund.nuke(1);
     }
+
+    function test_nukeFund_nuke() public {
+        _mintTraitForgeNft(user, 1);
+
+        vm.startPrank(user);
+        _traitForgeNft.approve(address(_nukeFund), 1);
+        _skipNukeMinimumDaysHeld();
+        _nukeFund.nuke(1);
+    }
 }

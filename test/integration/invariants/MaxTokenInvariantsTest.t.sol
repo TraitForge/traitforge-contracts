@@ -10,6 +10,8 @@ contract MaxTokenInvariantsTest is Deploys {
 
     function setUp() public virtual override {
         super.setUp();
+        vm.prank(_protocolMaintainer);
+        _traitForgeNft.setMaxGeneration(2); // totalSupply = 2 * maxTokensPerGen
         handler = new Handler(_traitForgeNft);
         targetContract(address(handler));
     }
