@@ -102,11 +102,10 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
 
         fund -= claimAmount; // Deduct the claim amount from the fund
 
+        _activateEmpIfNeeded(tokenId);
         traitForgeNft.burn(tokenId); // Burn the token
         (bool success,) = payable(msg.sender).call{ value: claimAmount }("");
         require(success, "Failed to send Ether");
-
-        _activateEmpIfNeeded(tokenId);
 
         emit Nuked(msg.sender, tokenId, claimAmount); // Emit the event with the actual claim amount
         emit FundBalanceUpdated(fund); // Update the fund balance

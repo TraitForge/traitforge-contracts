@@ -39,4 +39,19 @@ contract NukeFundTest_Nuke is NukeFundTest {
         vm.expectRevert(NukeFund.NukeFund__TokenNotMature.selector);
         _nukeFund.nuke(1);
     }
+
+    function testRevert_nukeFund_nuke_whenEmpIsActive() public {
+        uint256 maxTokenPerGen = _traitForgeNft.maxTokensPerGen();
+        _mintTraitForgeNft(user, maxTokenPerGen); // we mint all gen to make sure we get some emp tokens
+
+        uint256 empTokenId = _getTheNthEmpId(0, maxTokenPerGen, 1);
+        vm.startPrank(user);
+        _traitForgeNft.approve(address(_nukeFund), empTokenId);
+        _skipNukeMinimumDaysHeld();
+        _nukeFund.nuke(empTokenId);
+
+        _traitForgeNft.approve(address(_nukeFund), empTokenId + 1);
+        vm.expectRevert(NukeFund.NukeFund__EmpIsActive.selector);
+        _nukeFund.nuke(1);
+    }
 }

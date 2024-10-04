@@ -27,6 +27,7 @@ contract Deploys is Test {
     mapping(uint256 tokenId => bool) isTokenMerger;
     mapping(uint256 tokenId => bool) isTokenNoPotentialForger;
     mapping(uint256 tokenId => bool) isTokenNoPotentialMerger;
+    mapping(uint256 tokenId => bool) isEMPToken;
 
     AddressProvider internal _addressProvider;
     Airdrop internal _airdrop;
@@ -160,6 +161,9 @@ contract Deploys is Test {
                     isTokenNoPotentialMerger[tokenId] = true;
                 }
             }
+            if (_traitForgeNft.getTokenEntropy(tokenId) % 10 == 7) {
+                isEMPToken[tokenId] = true;
+            }
             vm.stopPrank();
         }
     }
@@ -196,6 +200,26 @@ contract Deploys is Test {
         uint256 count = 0;
         for (uint256 i = startIndex; i < endIndex; i++) {
             if (isTokenMerger[i + 1]) {
+                count++;
+                if (count == n) {
+                    theNthTokenId = i + 1;
+                }
+            }
+        }
+    }
+
+    function _getTheNthEmpId(
+        uint256 startIndex,
+        uint256 endIndex,
+        uint256 n
+    )
+        internal
+        view
+        returns (uint256 theNthTokenId)
+    {
+        uint256 count = 0;
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            if (isEMPToken[i + 1]) {
                 count++;
                 if (count == n) {
                     theNthTokenId = i + 1;

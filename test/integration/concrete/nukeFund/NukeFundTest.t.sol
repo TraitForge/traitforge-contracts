@@ -12,7 +12,7 @@ contract NukeFundTest is Deploys {
     }
 
     function _skipNukeMinimumDaysHeld() internal {
-        uint256 _endWhitheListTimestamp = _traitForgeNft.whitelistEndTime();
-        skip(_endWhitheListTimestamp + 1);
+        uint256 _minimumDaysHeld = _nukeFund.minimumDaysHeld();
+        skip(_minimumDaysHeld + 1);
     }
 }
