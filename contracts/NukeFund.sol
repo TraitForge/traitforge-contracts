@@ -202,6 +202,7 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         if (entropy % 10 == 7) {
             isEMPActive = true; // sets EMPActive to true if the token is an emp
             unpauseAt = block.number + (entropy / empDivisor); // sets the end index of pause
+            emit EmpActivated(tokenId, unpauseAt);
         }
     }
 

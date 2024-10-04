@@ -11,6 +11,7 @@ interface INukeFund {
     event AirdropAddressUpdated(address indexed newAddress);
     event DevAddressUpdated(address indexed newAddress);
     event DaoAddressUpdated(address indexed newAddress);
+    event EmpActivated(uint256 tokenId, uint256 unpauseAt);
 
     // Fallback function to receive ETH and update fund balance
     receive() external payable;
