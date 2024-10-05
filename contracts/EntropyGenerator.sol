@@ -7,16 +7,19 @@ import { AddressProviderResolver } from "./core/AddressProviderResolver.sol";
 
 // EntropyGenerator is a contract designed to generate pseudo-random values for use in other contracts
 contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausable {
-    uint256[833] private entropySlots; // Array to store entropy values
+    uint256 private constant MAX_SLOT_INDEX = 833;
+    uint256 private constant MAX_NUMBER_INDEX = 12;
+
+    uint256[MAX_SLOT_INDEX] private entropySlots; // Array to store entropy values
     uint256 private lastInitializedIndex = 0; // Indexes to keep track of the initialization and usage of entropy values
-    uint256 public currentSlotIndex = 0;
-    uint256 public currentNumberIndex = 0;
+    uint256 private currentSlotIndex = 0;
+    uint256 private currentNumberIndex = 0;
 
     // Constants to define the limits for slots and numbers within those slots
-    uint256 private maxSlotIndex = 833;
-    uint256 private maxNumberIndex = 12;
-    uint256 public slotIndexSelectionPoint;
-    uint256 public numberIndexSelectionPoint;
+    uint256 private slotIndexSelectionPoint;
+    uint256 private numberIndexSelectionPoint;
+
+    error EntropyGenerator__MaxSlotIndexReached();
 
     constructor(address addressProvider) AddressProviderResolver(addressProvider) {
         _writeEntropyBatch(); // M05
@@ -24,13 +27,14 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
     }
 
     function nextEntropy() public onlyEntropyAccessor returns (uint256) {
-        require(currentSlotIndex < maxSlotIndex, "Max slot index reached."); // M01
+        // this error should never be reverted as we control currentSlotIndex in the do while loop
+        if (currentSlotIndex >= MAX_SLOT_INDEX) revert EntropyGenerator__MaxSlotIndexReached();
         uint256 entropy;
         do {
             entropy = getEntropy(currentSlotIndex, currentNumberIndex);
-            if (currentNumberIndex >= maxNumberIndex - 1) {
+            if (currentNumberIndex >= MAX_NUMBER_INDEX - 1) {
                 currentNumberIndex = 0;
-                if (currentSlotIndex >= maxSlotIndex - 1) {
+                if (currentSlotIndex >= MAX_SLOT_INDEX - 1) {
                     currentSlotIndex = 0;
                 } else {
                     currentSlotIndex++;
@@ -54,7 +58,7 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
     }
 
     function getEntropySlot(uint256 index) external view returns (uint256) {
-        require(index < 833, "Index out of bounds");
+        require(index < MAX_SLOT_INDEX, "Index out of bounds");
         return entropySlots[index];
     }
 
@@ -74,7 +78,7 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
 
     // Private function to calculate the entropy value based on slot and number index
     function getEntropy(uint256 slotIndex, uint256 numberIndex) private view returns (uint256) {
-        require(slotIndex < maxSlotIndex, "Slot index out of bounds.");
+        require(slotIndex < MAX_SLOT_INDEX, "Slot index out of bounds.");
 
         if (slotIndex == slotIndexSelectionPoint && numberIndex == numberIndexSelectionPoint) {
             return 999_999;
@@ -103,7 +107,7 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
 
     // Functions to initialize entropy values in batches to spread gas cost over multiple transactions
     function _writeEntropyBatch() private {
-        uint256 endIndex = 833; // We want to initialize all 770 slots
+        uint256 endIndex = MAX_SLOT_INDEX; // We want to initialize all 770 slots
         for (uint256 i = lastInitializedIndex; i < endIndex; i++) {
             uint256 pseudoRandomValue =
                 uint256(keccak256(abi.encodePacked(block.number, block.timestamp, i))) % uint256(10) ** 77; // generate a
@@ -117,7 +121,7 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
         uint256 hashValue = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp)));
 
         uint256 slotIndexSelection = (hashValue % 258) + 612;
-        uint256 numberIndexSelection = hashValue % 12;
+        uint256 numberIndexSelection = hashValue % MAX_NUMBER_INDEX;
 
         slotIndexSelectionPoint = slotIndexSelection;
         numberIndexSelectionPoint = numberIndexSelection;
