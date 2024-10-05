@@ -22,6 +22,7 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
     uint256 public minimumDaysHeld = 3 days;
     address public ethCollector;
     uint256 public initNukeFactorDivisor = 100;
+    uint256 public goldenGodInitNfDivisor = 40;
 
     uint256 public unpauseAt;
     uint256 public empDivisor = 10;
@@ -145,6 +146,11 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         initNukeFactorDivisor = value;
     }
 
+    function setGoldenGodInitNfDivisor(uint256 value) external onlyProtocolMaintainer {
+        if (value == 0) revert NukeFund__DivisorIsZero();
+        goldenGodInitNfDivisor = value;
+    }
+
     function setEmpDivisor(uint256 value) external onlyProtocolMaintainer {
         if (value == 0) revert NukeFund__DivisorIsZero();
         empDivisor = value;
@@ -177,8 +183,12 @@ contract NukeFund is INukeFund, AddressProviderResolver, ReentrancyGuard, Pausab
         uint256 entropy = traitForgeNft.getTokenEntropy(tokenId);
         uint256 adjustedAge = calculateAge(tokenId);
 
-        uint256 initialNukeFactor = entropy / initNukeFactorDivisor; // calcualte initalNukeFactor based on entropy, 5
-            // digits
+        uint256 initialNukeFactor;
+        if (entropy == 999_999) {
+            initialNukeFactor = entropy / goldenGodInitNfDivisor;
+        } else {
+            initialNukeFactor = entropy / initNukeFactorDivisor;
+        }
 
         uint256 finalNukeFactor = ((adjustedAge * defaultNukeFactorIncrease) / MAX_DENOMINATOR) + initialNukeFactor; // CONSIDER
             // USING DYNAMIC INCREASE BY ENTROPY INSTEAD OF DEFAULT
