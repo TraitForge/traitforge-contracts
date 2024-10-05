@@ -78,3 +78,4 @@ To deploy contract on a network follow the steps below:
 4. You need to set the AccessProvider Address in the network file accordingly
 5. You can either deploy the protocol entirely now with `make deploy-all NETWORK=network_name` this will deploy all protocol but AccessController and AddressProvider, these 2 contracts needs to be deployed follwing the previous steps
 6. Don't forget to fill up the config network json file with the new deployed addresses
+7. Then you need to update the needed roles `make update-roles NETWORK=network_name`
