@@ -12,12 +12,12 @@ contract EntropyGenerator is IEntropyGenerator, AddressProviderResolver, Pausabl
 
     uint256[MAX_SLOT_INDEX] private entropySlots; // Array to store entropy values
     uint256 private lastInitializedIndex = 0; // Indexes to keep track of the initialization and usage of entropy values
-    uint256 private currentSlotIndex = 0;
-    uint256 private currentNumberIndex = 0;
+    uint256 public currentSlotIndex = 0;
+    uint256 public currentNumberIndex = 0;
 
     // Constants to define the limits for slots and numbers within those slots
-    uint256 private slotIndexSelectionPoint;
-    uint256 private numberIndexSelectionPoint;
+    uint256 public slotIndexSelectionPoint;
+    uint256 public numberIndexSelectionPoint;
 
     error EntropyGenerator__MaxSlotIndexReached();
 
