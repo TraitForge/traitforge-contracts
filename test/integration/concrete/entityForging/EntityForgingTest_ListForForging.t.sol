@@ -5,12 +5,13 @@ import { EntityForgingTest } from "test/integration/concrete/entityForging/Entit
 import { EntityForging } from "contracts/EntityForging.sol";
 
 contract EntityForgingTest_ListForForging is EntityForgingTest {
-    uint256 fee = 0.02 ether;
+    uint256 fee;
 
     function testRevert_entityForging_listForForging_whenPaused() public {
         vm.prank(_protocolMaintainer);
         _entityForging.pause();
 
+        fee = _traitForgeNft.calculateMintPrice();
         vm.expectRevert(bytes("Pausable: paused"));
         vm.prank(_randomUser);
         _entityForging.listForForging(1, fee);
@@ -20,9 +21,11 @@ contract EntityForgingTest_ListForForging is EntityForgingTest {
         _mintTraitForgeNft(user, 1000);
         uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
 
+        fee = _traitForgeNft.calculateMintPrice();
         vm.startPrank(user);
         _entityForging.listForForging(forgerId, fee);
 
+        fee = _traitForgeNft.calculateMintPrice();
         vm.expectRevert(EntityForging.EntityForging__TokenAlreadyListed.selector);
         _entityForging.listForForging(forgerId, fee);
     }
@@ -33,6 +36,8 @@ contract EntityForgingTest_ListForForging is EntityForgingTest {
         uint256 price = _traitForgeNft.calculateMintPrice();
         vm.prank(user);
         _traitForgeNft.mintToken{ value: price }(proofs);
+
+        fee = _traitForgeNft.calculateMintPrice();
 
         vm.prank(_randomUser);
         vm.expectRevert(EntityForging.EntityForging__TokenNotOwnedByCaller.selector);
@@ -54,6 +59,8 @@ contract EntityForgingTest_ListForForging is EntityForgingTest {
     function test_entityForging_listForForging() public {
         _mintTraitForgeNft(user, 1000);
         uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
+
+        fee = _traitForgeNft.calculateMintPrice();
 
         vm.startPrank(user);
         _entityForging.listForForging(forgerId, fee);
