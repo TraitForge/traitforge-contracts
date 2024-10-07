@@ -11,7 +11,7 @@ abstract contract Fork_Test is Test, Configured {
 
     function setUp() public virtual {
         // Fork Polygon Mainnet at a specific block number.
-        vm.createSelectFork({ blockNumber: 15_786_029, urlOrAlias: "base_sepolia" });
+        vm.createSelectFork({ blockNumber: 16_223_153, urlOrAlias: "base_sepolia" });
 
         _initConfig();
         _loadConfig();

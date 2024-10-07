@@ -23,8 +23,6 @@ interface IEntityForging {
 
     function setOneYearInDays(uint256 value) external;
 
-    function setMinimumListingFee(uint256 _fee) external;
-
     function listForForging(uint256 tokenId, uint256 fee) external;
 
     function forgeWithListed(uint256 forgerTokenId, uint256 mergerTokenId) external payable returns (uint256);

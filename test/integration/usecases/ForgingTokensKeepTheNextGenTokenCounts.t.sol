@@ -23,10 +23,11 @@ contract ForgingTokensKeepTheNextGenTokenCounts is Deploys {
 
         //we forge
         vm.startPrank(user);
-        _entityForging.listForForging(forgerId1, 0.02 ether);
-        _entityForging.listForForging(forgerId2, 0.02 ether);
-        _entityForging.forgeWithListed{ value: 0.02 ether }(forgerId1, mergerId1);
-        _entityForging.forgeWithListed{ value: 0.02 ether }(forgerId2, mergerId2);
+        uint256 fee = _traitForgeNft.calculateMintPrice();
+        _entityForging.listForForging(forgerId1, fee);
+        _entityForging.listForForging(forgerId2, fee);
+        _entityForging.forgeWithListed{ value: fee }(forgerId1, mergerId1);
+        _entityForging.forgeWithListed{ value: fee }(forgerId2, mergerId2);
         vm.stopPrank();
 
         assertEq(_traitForgeNft.generationMintCounts(2), 2);

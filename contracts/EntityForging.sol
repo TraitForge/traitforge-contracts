@@ -20,7 +20,6 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     uint256 private constant BPS = 10_000; // denominator of basis points
     uint256 public oneYearInDays = 365 days;
     uint256 public listingCount = 0;
-    uint256 public minimumListFee = 0.01 ether;
 
     /// @dev tokenid -> listings index
     mapping(uint256 => uint256) public listedTokenIds;
@@ -74,16 +73,12 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         oneYearInDays = value;
     }
 
-    function setMinimumListingFee(uint256 _fee) external onlyProtocolMaintainer {
-        minimumListFee = _fee;
-    }
-
     function listForForging(uint256 tokenId, uint256 fee) public whenNotPaused nonReentrant {
         Listing memory _listingInfo = listings[listedTokenIds[tokenId]];
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         if (_listingInfo.isListed) revert EntityForging__TokenAlreadyListed();
         if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert EntityForging__TokenNotOwnedByCaller();
-        if (fee < minimumListFee) revert EntityForging__FeeTooLow();
+        if (fee < traitForgeNft.calculateMintPrice()) revert EntityForging__FeeTooLow();
 
         _resetForgingCountIfNeeded(tokenId);
 
@@ -199,6 +194,10 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
 
     function getListings(uint256 id) external view override returns (Listing memory) {
         return listings[id];
+    }
+
+    function getListingForTokenId(uint256 tokenId) external view returns (Listing memory) {
+        return listings[listedTokenIds[tokenId]];
     }
 
     /**
