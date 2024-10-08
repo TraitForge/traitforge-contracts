@@ -69,6 +69,10 @@ update-devs:
 	@echo "Updating devs on $(NETWORK)..."
 	forge script script/deployment/UpdateDevs.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 
+revoke-deployer:
+	@echo "Revoking deployer roles on $(NETWORK)..."
+	forge script script/deployment/RevokeDeployer.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+
 
 
 
