@@ -12,14 +12,17 @@ contract FixEntityTrading is BaseScript {
     IEntityTrading.Listing[] public listings;
     uint256 public count;
 
-    function run() public virtual initConfig broadcast returns (address) {
+    function run() public virtual initConfig returns (address) {
+        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
         if (addressProvider == address(0)) {
             revert AddressProviderAddressIsZero();
         }
 
         address currentEntityTrading = AddressProvider(addressProvider).getEntityTrading();
 
+        vm.startBroadcast(deployerKey);
         address newEntityTrading = _deployEntityTrading();
+        vm.stopBroadcast();
         console.log("EntityTrading deployed at address: ", newEntityTrading);
 
         /////////////////// MIGRATING DATA ///////////////////
@@ -44,6 +47,9 @@ contract FixEntityTrading is BaseScript {
         }
 
         // Migrate data to newEntityTrading
+        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
+        vm.startBroadcast(deployerKey);
         EntityTrading(newEntityTrading).migrateData(listings, count);
+        vm.stopBroadcast();
     }
 }
