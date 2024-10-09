@@ -8,7 +8,6 @@ import { ITraitForgeNft } from "./interfaces/ITraitForgeNft.sol";
 import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.sol";
 
 contract EntityTrading is IEntityTrading, AddressProviderResolver, ReentrancyGuard, Pausable {
-    address payable public nukeFundAddress;
     uint256 private constant BPS = 10_000; // denominator of basis points
     uint256 public taxCut = 1000; //10%
 
@@ -89,10 +88,19 @@ contract EntityTrading is IEntityTrading, AddressProviderResolver, ReentrancyGua
 
     // Correct and secure version of transferToNukeFund function
     function transferToNukeFund(uint256 amount) private {
-        require(_getNukeFundAddress() != address(0), "NukeFund address not set");
+        address nukeFundAddress = _getNukeFundAddress();
+        require(nukeFundAddress != address(0), "NukeFund address not set");
         (bool success,) = nukeFundAddress.call{ value: amount }("");
         require(success, "Failed to send Ether to NukeFund");
         emit NukeFundContribution(address(this), amount);
+    }
+
+    function migrateData(Listing[] memory _listings, uint256 _listingCount) external onlyProtocolMaintainer {
+        for (uint256 i = 0; i < _listings.length; i++) {
+            listings[i + 1] = _listings[i];
+            listedTokenIds[_listings[i].tokenId] = i + 1;
+        }
+        listingCount = _listingCount;
     }
 
     function _getTraitForgeNft() private view returns (ITraitForgeNft) {
