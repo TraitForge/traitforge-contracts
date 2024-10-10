@@ -137,6 +137,7 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
         uint256 forgerId = _getTheNthForgerId(0, 1000, 1);
         uint256 mergerId = _getTheNthMergerId(0, 1000, 1);
         uint256 fee = _traitForgeNft.calculateMintPrice();
+        uint256 nukeBalanceBefore = address(_nukeFund).balance;
         vm.startPrank(user);
         _entityForging.listForForging(forgerId, fee);
         uint256 forgedTokenId = _entityForging.forgeWithListed{ value: fee }(forgerId, mergerId);
@@ -144,5 +145,6 @@ contract EntityForgingTest_ForgeWithListed is EntityForgingTest {
         assertEq(_traitForgeNft.getTokenGeneration(forgedTokenId), 2);
         assertEq(_entityForging.forgingCounts(forgerId), 1);
         assertEq(_entityForging.forgingCounts(mergerId), 1);
+        assertEq(address(_nukeFund).balance, nukeBalanceBefore + fee / 10);
     }
 }

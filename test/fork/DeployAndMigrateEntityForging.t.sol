@@ -13,7 +13,7 @@ contract DeployAndMigrateEntityForging is Fork_Test {
         fixScript = new FixEntityForging();
     }
 
-    function test_deployAndMigrateEntityTrading() public {
+    function test_deployAndMigrateEntityForging() public {
         EntityForging newEntityForgingContract = EntityForging(fixScript.run());
         uint256 index = newEntityForgingContract.listedTokenIds(2165);
         (address account, uint256 tokenId, bool isListed, uint256 fee) = newEntityForgingContract.listings(index);
