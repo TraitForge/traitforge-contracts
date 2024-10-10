@@ -14,12 +14,6 @@ contract DeployAndMigrateEntityForging is Fork_Test {
     }
 
     function test_deployAndMigrateEntityForging() public {
-        EntityForging newEntityForgingContract = EntityForging(fixScript.run());
-        // uint256 index = newEntityForgingContract.listedTokenIds(2165);
-        // (address account, uint256 tokenId, bool isListed, uint256 fee) = newEntityForgingContract.listings(99);
-        // assertEq(account, address(0x1C51593463891B4F7D112A2a1ddFcD1eA75a3b7d));
-        // assertEq(tokenId, 1716);
-        // assertTrue(isListed);
-        // assertEq(fee, 450_000_000_000_000_000);
+        EntityForging(fixScript.run());
     }
 }

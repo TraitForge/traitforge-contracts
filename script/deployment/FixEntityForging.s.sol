@@ -21,6 +21,7 @@ contract FixEntityForging is BaseScript {
         address formerEntityForging = AddressProvider(addressProvider).getEntityForging();
         console.log("former EntityForging is at address: ", formerEntityForging);
 
+        // HERE is The new EntityForging address
         address newEntityForging = address(0xCAD8EfdF86252FB024F4E03cC1Fa44f8130d2FAf);
         console.log("new EntityForging is at address: ", newEntityForging);
 
@@ -45,8 +46,8 @@ contract FixEntityForging is BaseScript {
         console.log("listings: ", listings.length);
         console.log("count: ", count);
 
-        // uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
-        vm.startBroadcast(address(0x225b791581185B73Eb52156942369843E8B0Eec7));
+        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
+        vm.startBroadcast(deployerKey);
         EntityForging(_newEntityForging).migrateListingData(listings, count);
         vm.stopBroadcast();
     }

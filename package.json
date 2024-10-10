@@ -23,7 +23,7 @@
     "@types/mocha": "^10.0.6",
     "chai": "^4.4.1",
     "dotenv": "^16.4.5",
-    "ethers": "5.7",
+    "ethers": "^6.10.0",
     "forge-std": "github:foundry-rs/forge-std",
     "hardhat": "^2.19.4",
     "hardhat-gas-reporter": "^1.0.9",
