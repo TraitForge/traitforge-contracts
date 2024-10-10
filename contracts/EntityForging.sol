@@ -15,7 +15,6 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
     // Modifiers
 
     // State variables
-    address payable public nukeFundAddress;
     uint256 public taxCut = 1000; //10%
     uint256 private constant BPS = 10_000; // denominator of basis points
     uint256 public oneYearInDays = 365 days;
@@ -170,6 +169,22 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         _cancelListingForForging(tokenId);
     }
 
+    function migrateListingData(Listing[] memory _listings, uint256 _listingCount) external onlyProtocolMaintainer {
+        for (uint256 i = 0; i < _listings.length; i++) {
+            listings[i + 1] = _listings[i];
+            listedTokenIds[_listings[i].tokenId] = i + 1;
+        }
+        listingCount = _listingCount;
+    }
+
+    function migrateForgedPairsData(uint256[] memory lowerIds, uint256[] memory higherIds) external onlyProtocolMaintainer {
+        require(lowerIds.length == higherIds.length, "Array length mismatch");
+        for (uint256 i = 0; i < lowerIds.length; i++) {
+            forgedPairs[lowerIds[i]][higherIds[i]] = true;
+            forgingCounts[lowerIds[i]]++;
+            forgingCounts[higherIds[i]]++;
+        }
+    }
     //////////////////////////// read functions ////////////////////////////
 
     function fetchListings(uint256 offset, uint256 limit) external view returns (Listing[] memory _listings) {
@@ -227,7 +242,7 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         uint256 devShare = (forgingFee * taxCut) / BPS;
         uint256 forgerShare = forgingFee - devShare;
 
-        (bool success,) = nukeFundAddress.call{ value: devShare }("");
+        (bool success,) = payable(_getNukeFundAddress()).call{ value: devShare }("");
         require(success, "Failed to send to NukeFund");
 
         address payable forgerOwner = payable(traitForgeNft.ownerOf(forgerId));
@@ -251,5 +266,9 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
 
     function _higherId(uint256 tokenId1, uint256 tokenId2) private pure returns (uint256) {
         return tokenId1 < tokenId2 ? tokenId2 : tokenId1;
+    }
+
+    function _getNukeFundAddress() private view returns (address) {
+        return _addressProvider.getNukeFund();
     }
 }
