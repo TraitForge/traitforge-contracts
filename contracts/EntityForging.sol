@@ -173,10 +173,24 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         _cancelListingForForging(tokenId);
     }
 
-    function migrateListingData(Listing[] memory _listings, uint256 _listingCount) external onlyProtocolMaintainer {
-        for (uint256 i = 0; i < _listings.length; i++) {
-            listings[i + 1] = _listings[i];
-            listedTokenIds[_listings[i].tokenId] = i + 1;
+    function migrateListingData(
+        Listing[] memory _listings,
+        uint256 startIndex,
+        uint256 endIndex,
+        uint256 _listingCount
+    )
+        external
+        onlyProtocolMaintainer
+    {
+        if (endIndex > _listings.length) {
+            revert EntityForging__OffsetOutOfBounds();
+        }
+        if (startIndex > endIndex) {
+            revert EntityForging__OffsetOutOfBounds();
+        }
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            listings[startIndex + i + 1] = _listings[i];
+            listedTokenIds[_listings[i].tokenId] = startIndex + i + 1;
         }
         listingCount = _listingCount;
     }
