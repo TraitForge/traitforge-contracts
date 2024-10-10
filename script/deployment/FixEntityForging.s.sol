@@ -13,20 +13,19 @@ contract FixEntityForging is BaseScript {
     uint256 public count;
 
     function run() public virtual initConfig returns (address) {
-        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
         if (addressProvider == address(0)) {
             revert AddressProviderAddressIsZero();
         }
 
-        address currentEntityForging = AddressProvider(addressProvider).getEntityForging();
+        // HERE is The former EntityForging address
+        address formerEntityForging = address(0xE1d5493b321d16e12c747bEc0E1ab4d4dBBf1AF9);
+        console.log("former EntityForging is at address: ", formerEntityForging);
 
-        vm.startBroadcast(deployerKey);
-        address newEntityForging = _deployEntityForging();
-        vm.stopBroadcast();
-        console.log("new EntityForging deployed at address: ", newEntityForging);
+        address newEntityForging = AddressProvider(addressProvider).getEntityForging();
+        console.log("new EntityForging is at address: ", newEntityForging);
 
         /////////////////// MIGRATING DATA ///////////////////
-        _migrateEntityForgingData(currentEntityForging, newEntityForging);
+        _migrateEntityForgingData(formerEntityForging, newEntityForging);
         return newEntityForging;
     }
 
@@ -34,20 +33,23 @@ contract FixEntityForging is BaseScript {
         return address(new EntityForging(addressProvider));
     }
 
-    function _migrateEntityForgingData(address currentEntityForging, address newEntityForging) internal {
-        count = EntityForging(currentEntityForging).listingCount();
+    function _migrateEntityForgingData(address _formerEntityForging, address _newEntityForging) internal {
+        count = EntityForging(_formerEntityForging).listingCount();
         for (uint256 i = 1; i <= count; i++) {
             (address account, uint256 tokenId, bool isListed, uint256 fee) =
-                EntityForging(currentEntityForging).listings(i);
+                EntityForging(_formerEntityForging).listings(i);
             EntityForging.Listing memory l = IEntityForging.Listing(account, tokenId, isListed, fee);
             if (l.isListed) {
                 listings.push(l);
             }
         }
 
+        console.log("listings: ", listings.length);
+        console.log("count: ", count);
+
         uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
         vm.startBroadcast(deployerKey);
-        EntityForging(newEntityForging).migrateListingData(listings, count);
+        EntityForging(_newEntityForging).migrateListingData(listings, count);
         vm.stopBroadcast();
     }
 }
