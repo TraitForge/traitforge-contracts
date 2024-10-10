@@ -111,3 +111,9 @@ deploy-trait:
 deploy-traitForgeNft:
 	@echo "Deploying traitForgeNft contract on $(NETWORK)..."
 	forge script script/deployment/10_DeployTraitForgeNft.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+
+
+
+fix-entityForging:
+	@echo "Fixing entityForging contract on $(NETWORK)..."
+	forge script script/deployment/FixEntityForging.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
