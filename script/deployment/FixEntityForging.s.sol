@@ -324,9 +324,9 @@ contract FixEntityForging is BaseScript {
 
         uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
         vm.startBroadcast(deployerKey);
-        // EntityForging(_newEntityForging).migrateListingData(listings,0, 100, count);
-        EntityForging(_newEntityForging).migrateListingData(listings,100, 200, count);
-        EntityForging(_newEntityForging).migrateListingData(listings,200, 272, count);
+        EntityForging(_newEntityForging).migrateListingData(listings, 0, 100, count);
+        EntityForging(_newEntityForging).migrateListingData(listings, 100, 200, count);
+        EntityForging(_newEntityForging).migrateListingData(listings, 200, 272, count);
         vm.stopBroadcast();
     }
 }
