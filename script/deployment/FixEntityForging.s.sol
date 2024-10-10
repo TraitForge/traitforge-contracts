@@ -18,10 +18,10 @@ contract FixEntityForging is BaseScript {
         }
 
         // HERE is The former EntityForging address
-        address formerEntityForging = address(0xE1d5493b321d16e12c747bEc0E1ab4d4dBBf1AF9);
+        address formerEntityForging = AddressProvider(addressProvider).getEntityForging();
         console.log("former EntityForging is at address: ", formerEntityForging);
 
-        address newEntityForging = AddressProvider(addressProvider).getEntityForging();
+        address newEntityForging = address(0xCAD8EfdF86252FB024F4E03cC1Fa44f8130d2FAf);
         console.log("new EntityForging is at address: ", newEntityForging);
 
         /////////////////// MIGRATING DATA ///////////////////
@@ -36,9 +36,7 @@ contract FixEntityForging is BaseScript {
     function _migrateEntityForgingData(address _formerEntityForging, address _newEntityForging) internal {
         count = EntityForging(_formerEntityForging).listingCount();
         for (uint256 i = 1; i <= count; i++) {
-            (address account, uint256 tokenId, bool isListed, uint256 fee) =
-                EntityForging(_formerEntityForging).listings(i);
-            EntityForging.Listing memory l = IEntityForging.Listing(account, tokenId, isListed, fee);
+            EntityForging.Listing memory l = EntityForging(_formerEntityForging).getListings(i);
             if (l.isListed) {
                 listings.push(l);
             }
@@ -47,8 +45,8 @@ contract FixEntityForging is BaseScript {
         console.log("listings: ", listings.length);
         console.log("count: ", count);
 
-        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
-        vm.startBroadcast(deployerKey);
+        // uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
+        vm.startBroadcast(address(0x225b791581185B73Eb52156942369843E8B0Eec7));
         EntityForging(_newEntityForging).migrateListingData(listings, count);
         vm.stopBroadcast();
     }
