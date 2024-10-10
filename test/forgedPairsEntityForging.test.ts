@@ -1,4 +1,4 @@
-import { parseEther } from 'ethers';
+import { assert, parseEther } from 'ethers';
 import {
   Airdrop,
   DevFund,
@@ -67,6 +67,7 @@ describe('EntityForging', () => {
       let count = 0;
       const lowerIds = [];
       const higherIds = [];
+      let tt_count = 0;
       for (const event of events) {
         count++;
         const log = {
@@ -95,10 +96,15 @@ describe('EntityForging', () => {
 
         lowerIds.push(lowerId);
         higherIds.push(higherId);
+        console.log('lowerId: ', lowerId);
+        console.log('higherId: ', higherId);
+        if (lowerId == '2174' || higherId == '2174') {
+          tt_count++;
+        }
 
-        // console.log(
-        //   '//////////////////////////////////////////////////////////////////'
-        // );
+        console.log(
+          '//////////////////////////////////////////////////////////////////'
+        );
 
         // const { forgerId, mergerId } = event.args;
 
@@ -110,6 +116,9 @@ describe('EntityForging', () => {
         // console.log(`Block Timestamp: ${new Date(timestamp * 1000).toLocaleString()}`);
       }
       await migrateForgedPairsData(protocolMaintainer, lowerIds, higherIds);
+      const t_count = await newEntityForging.forgingCounts(2174);
+      expect(t_count).to.equal(tt_count);
+      
     }
 
     async function migrateForgedPairsData(
