@@ -7,7 +7,7 @@ const provider = new JsonRpcProvider(
 
 // Adresse du contrat EntityForging
 const entityForgingAddress = '0xE1d5493b321d16e12c747bEc0E1ab4d4dBBf1AF9';
-const newEntityForgingAddress = '0xNEW_CONTRACT_ADDRESS'; // Remplacez par l'adresse de votre nouveau contrat
+const newEntityForgingAddress = '0xfCC74E0c0f63a6aF6A292fC3cA44C2082C138708'; // Remplacez par l'adresse de votre nouveau contrat
 
 // ABI du contrat (seulement la partie pour l'événement EntityForged)
 const entityForgingABI = [
@@ -96,9 +96,12 @@ async function fetchPastEvents() {
     lowerIds.push(lowerId);
     higherIds.push(higherId);
 
-    // console.log(
-    //   '//////////////////////////////////////////////////////////////////'
-    // );
+    console.log('lowerId: ', lowerId);
+    console.log('higherId: ', higherId);
+
+    console.log(
+      '//////////////////////////////////////////////////////////////////'
+    );
 
     // const { forgerId, mergerId } = event.args;
 
@@ -109,7 +112,7 @@ async function fetchPastEvents() {
     // console.log(`Past Event - Forger ID: ${forgerId.toString()}, Merger ID: ${mergerId.toString()}`);
     // console.log(`Block Timestamp: ${new Date(timestamp * 1000).toLocaleString()}`);
   }
-  await migrateForgedPairsData(lowerIds, higherIds);
+//   await migrateForgedPairsData(lowerIds, higherIds);
 }
 
 async function migrateForgedPairsData(lowerIds: string[], higherIds: string[]) {
