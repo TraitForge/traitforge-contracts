@@ -22,11 +22,11 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
 
     /// @dev tokenid -> listings index
     mapping(uint256 => uint256) public listedTokenIds;
-    mapping(uint256 => mapping(uint256 => bool)) private forgedPairs; //innefficient
+    mapping(uint256 => mapping(uint256 => bool)) public forgedPairs; //innefficient
     /// @dev index -> listing info
     mapping(uint256 => Listing) public listings;
     mapping(uint256 => uint8) public forgingCounts; // track forgePotential
-    mapping(uint256 => uint256) private lastForgeResetTimestamp;
+    mapping(uint256 => uint256) public lastForgeResetTimestamp;
 
     //Errors
     error EntityForging__OffsetOutOfBounds();
@@ -134,6 +134,10 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         if (!(mergerForgePotential > 0 && forgingCounts[mergerId] <= mergerForgePotential)) {
             revert EntityForging__InsufficientMergerForgePotential();
         }
+        uint256 forgerEntropy = traitForgeNft.getTokenEntropy(forgerTokenId);
+        if ((forgerEntropy % 10) == 2) {
+            forgingCounts[mergerId] = 0;
+        }
         /// TODO Stack too deep
         // uint256 devShare = (msg.value * taxCut) / BPS;
         // uint256 forgingFee = _forgerListingInfo.fee;
@@ -177,7 +181,13 @@ contract EntityForging is IEntityForging, AddressProviderResolver, ReentrancyGua
         listingCount = _listingCount;
     }
 
-    function migrateForgedPairsData(uint256[] memory lowerIds, uint256[] memory higherIds) external onlyProtocolMaintainer {
+    function migrateForgedPairsData(
+        uint256[] memory lowerIds,
+        uint256[] memory higherIds
+    )
+        external
+        onlyProtocolMaintainer
+    {
         require(lowerIds.length == higherIds.length, "Array length mismatch");
         for (uint256 i = 0; i < lowerIds.length; i++) {
             forgedPairs[lowerIds[i]][higherIds[i]] = true;
