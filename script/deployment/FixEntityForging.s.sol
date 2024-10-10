@@ -13,14 +13,14 @@ contract FixEntityForging is BaseScript {
     uint256 public count;
 
     function run() public virtual initConfig returns (address) {
-        // uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
+        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
         if (addressProvider == address(0)) {
             revert AddressProviderAddressIsZero();
         }
 
         address currentEntityForging = AddressProvider(addressProvider).getEntityForging();
 
-        vm.startBroadcast(address(0x225b791581185B73Eb52156942369843E8B0Eec7));
+        vm.startBroadcast(deployerKey);
         address newEntityForging = _deployEntityForging();
         vm.stopBroadcast();
         console.log("new EntityForging deployed at address: ", newEntityForging);
@@ -45,8 +45,8 @@ contract FixEntityForging is BaseScript {
             }
         }
 
-        // uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
-        vm.startBroadcast(address(0x225b791581185B73Eb52156942369843E8B0Eec7));
+        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
+        vm.startBroadcast(deployerKey);
         EntityForging(newEntityForging).migrateListingData(listings, count);
         vm.stopBroadcast();
     }
