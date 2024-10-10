@@ -7,6 +7,7 @@ dotenv.config();
 import './scripts/deployTasks';
 
 interface Environment {
+  BASE_RPC_URL: string;
   ETHEREUM_RPC_URL: string;
   SEPOLIA_RPC_URL: string;
   PRIVATE_KEY: string;
@@ -14,6 +15,7 @@ interface Environment {
 }
 
 const env: Environment = {
+  BASE_RPC_URL: process.env.BASE_RPC_URL ?? '',
   ETHEREUM_RPC_URL: process.env.ETHEREUM_RPC_URL ?? '',
   SEPOLIA_RPC_URL: process.env.SEPOLIA_RPC_URL ?? '',
   PRIVATE_KEY: process.env.PRIVATE_KEY ?? '',
@@ -24,7 +26,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.20',
+        version: '0.8.23',
         settings: {
           optimizer: {
             enabled: true,
@@ -38,10 +40,10 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
-      // forking: {
-      //   url: env.ETHEREUM_RPC_URL,
-      //   blockNumber: 20127471,
-      // },
+      forking: {
+        url: env.BASE_RPC_URL,
+        blockNumber: 20_882_776,
+      },
     },
     ethereum: {
       chainId: 1,
@@ -51,6 +53,11 @@ const config: HardhatUserConfig = {
     sepolia: {
       chainId: 11155111,
       url: env.SEPOLIA_RPC_URL,
+      accounts: env.PRIVATE_KEY.length > 0 ? [env.PRIVATE_KEY] : [],
+    },
+    base: {
+      chainId: 8453,
+      url: env.BASE_RPC_URL,
       accounts: env.PRIVATE_KEY.length > 0 ? [env.PRIVATE_KEY] : [],
     },
   },
