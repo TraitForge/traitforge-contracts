@@ -11,7 +11,6 @@ import { TraitForgeNft } from "contracts/TraitForgeNft.sol";
 contract EntityForgingForkTest is Fork_Test {
     address sender = 0x225b791581185B73Eb52156942369843E8B0Eec7;
     address whaleETH = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
-    EntityForging newEntityForging = EntityForging(0xfCC74E0c0f63a6aF6A292fC3cA44C2082C138708);
 
     uint256[] lowerIds = [
         22,
@@ -948,8 +947,6 @@ contract EntityForgingForkTest is Fork_Test {
     function setUp() public override {
         super.setUp();
         AddressProvider ap = AddressProvider(addressProvider);
-        vm.prank(protocolMaintainer);
-        ap.setEntityForging(address(newEntityForging));
         vm.prank(whaleETH);
         payable(sender).call{ value: 1 ether }("");
     }
@@ -960,16 +957,16 @@ contract EntityForgingForkTest is Fork_Test {
         vm.startPrank(sender);
         uint256 tokenId = TraitForgeNft(traitForgeNft).mintToken{ value: price }(proofs);
         console.log("tokenId: ", tokenId);
-        EntityForging(newEntityForging).listForForging(tokenId, 1 ether);
-        EntityForging.Listing memory listing = EntityForging(newEntityForging).getListingForTokenId(tokenId);
+        EntityForging(entityForging).listForForging(tokenId, 1 ether);
+        EntityForging.Listing memory listing = EntityForging(entityForging).getListingForTokenId(tokenId);
         assertEq(listing.tokenId, tokenId);
         assertEq(listing.fee, 1 ether);
         assertEq(listing.isListed, true);
         assertEq(listing.account, sender);
 
         // now we cancel the listing
-        EntityForging(newEntityForging).cancelListingForForging(tokenId);
-        EntityForging.Listing memory listing1 = EntityForging(newEntityForging).getListingForTokenId(tokenId);
+        EntityForging(entityForging).cancelListingForForging(tokenId);
+        EntityForging.Listing memory listing1 = EntityForging(entityForging).getListingForTokenId(tokenId);
         assertEq(listing1.tokenId, 0);
         assertEq(listing1.fee, 0);
         assertEq(listing1.isListed, false);
@@ -979,13 +976,13 @@ contract EntityForgingForkTest is Fork_Test {
     function test_forgeFork() public {
         uint256 balanceBf = nukeFund.balance;
         vm.prank(sender);
-        newEntityForging.forgeWithListed{ value: 0.048708 ether }(697, 1132);
+        EntityForging(entityForging).forgeWithListed{ value: 0.048708 ether }(697, 1132);
         console.log("balance: ", nukeFund.balance - balanceBf);
     }
 
     function test_compareMigratedForgePairsData() public {
         for (uint256 i = 0; i < lowerIds.length; i++) {
-            bool forged = newEntityForging.forgedPairs(lowerIds[i], higherIds[i]);
+            bool forged = EntityForging(entityForging).forgedPairs(lowerIds[i], higherIds[i]);
             assertEq(forged, true);
         }
     }
