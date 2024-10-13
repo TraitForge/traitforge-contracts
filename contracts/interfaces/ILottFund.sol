@@ -31,6 +31,7 @@ interface ILottFund {
     function setTaxCut(uint256 _taxCut) external;
     function setMaxAllowedClaimDivisor(uint256 _divisor) external;
     function setMaxBidsPerAddress(uint256 _limit) external;
+    function setAmountToWin(uint256 _amountToWin) external
     function setNukeFactorMaxParam(uint256 _nukeFactorMaxParam) external;
     function setEthCollector(address _ethCollector) external;
     function setNativePayment(bool isTrue) external;

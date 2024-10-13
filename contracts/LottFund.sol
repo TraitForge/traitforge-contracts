@@ -37,6 +37,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     bool public pausedBids = false;
     uint256 public maxBidAmount = 1500;
     uint256 public amountToBeBurnt = 5;
+    uint256 public amountToWin = 1;
     uint256 public maxBidsPerAddress = 150
     uint256 public maxModulusForToken = 2;
     uint256 public bidsAmount;
@@ -158,8 +159,11 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             revert LottFund__BiddingNotFinished();
         }  
         requestRandomWords(nativePayment);
-        uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds that have been bidded
-        uint256 winnerTokenId = tokenIdsBidded[winnerIndex]; // Get the winner's token ID
+        uint256[] memory tokensToWin = new uint256[](amountToWin); //memory to stre the tokens to be burnt
+        for (uint256 i = 1; i <= amountToWin; i++) { // A for loop incase we want to add multiple winners later
+            uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds that have been bidded
+            uint256 winnerTokenId = tokenIdsBidded[winnerIndex]; // Get the winner's token ID
+        }
 
         uint256[] memory tokensToBurn = new uint256[](amountToBeBurnt); //memory to stre the tokens to be burnt
         for (uint256 i = 1; i <= amountToBeBurnt; i++) { // Use the next 5 numbers to locate the indexes of 5 tokenIds to burn
@@ -307,6 +311,10 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
 
     function setAmountToBeBurnt(uint256 _amountToBeBurnt) external onlyProtocolMaintainer {
        amountToBeBurnt = _amountToBeBurnt;
+    }
+
+    function setAmountToWin(uint256 _amountToWin) external onlyProtocolMaintainer {
+        amountToWin = _amountToWin;
     }
 
     function setPausedBids(bool _pausedBids) external onlyProtocolMaintainer {
