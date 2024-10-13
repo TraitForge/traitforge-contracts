@@ -38,6 +38,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     uint256 public maxBidAmount = 1500;
     uint256 public amountToBeBurnt = 5;
     uint256 public maxBidsPerAddress = 150
+    uint256 public maxModulusForToken = 2;
     uint256 public bidsAmount;
     bool private nativePayment = true;
     mapping(uint256 tokenId => uint256 bids) public tokenBidCount;
@@ -212,7 +213,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     function canTokenBeBidded(uint256 tokenId) external view returns (bool){
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         entropy = traitForgeNft.getTokenEntropy(tokenId); // get entities 6 digit entropy
-        maxBidPotential = entropy % 2; // calculation for maxBidPotenital from entropy eg 999999 = 
+        maxBidPotential = entropy % maxModulusForToken; // calculation for maxBidPotenital from entropy eg 999999 = 
         if(entropy == 999_999){ // if golden god (999999) maxBidPotential is +1 over max
             maxBidPotential = 3
         }
@@ -240,7 +241,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     function getMaxBidPotential(tokenId) public view returns (uint256) {
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         entropy = traitForgeNft.getTokenEntropy(tokenId);
-        maxBidPotential = entropy % 2;
+        maxBidPotential = entropy % maxModulusForToken;
         return maxBidPotential;
     }
 
@@ -280,6 +281,10 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     function setMaxAllowedClaimDivisor(uint256 _divisor) external onlyProtocolMaintainer {
         require(_divisor > 0, "Divisor must be greater than 0.");
         maxAllowedClaimDivisor = _divisor;
+    }
+
+    function setMaxModulusForToken(uint256 _number) external onlyProtocolMaintainer{
+        maxModulusForToken = _number
     }
 
     function setNukeFactorMaxParam(uint256 _nukeFactorMaxParam) external onlyProtocolMaintainer {
