@@ -10,6 +10,7 @@
     "genMerkleTree": "npx hardhat run ./scripts/saveMerkleTreeToJson.ts"
   },
   "devDependencies": {
+    "@chainlink/contracts": "^1.2.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.3",
     "@nomicfoundation/hardhat-ethers": "^3.0.5",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.10",

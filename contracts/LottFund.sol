@@ -3,22 +3,22 @@ pragma solidity ^0.8.20;
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
-import { ILottFund } from "contracts/interfaces/INukeFund.sol";
+import { ILottFund } from "contracts/interfaces/ILottFund.sol";
 import { ITraitForgeNft } from "contracts/interfaces/ITraitForgeNft.sol";
 import { IAirdrop } from "contracts/interfaces/IAirdrop.sol";
 import { AddressProviderResolver } from "contracts/core/AddressProviderResolver.sol";
-import {VRFConsumerBaseV2Plus} from "@chainlink/contracts@1.2.0/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts@1.2.0/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 
-contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, ReentrancyGuard, Pausable {
+contract LottFund is VRFConsumerBaseV2, ILottFund, AddressProviderResolver, ReentrancyGuard, Pausable {
     // Structs
     struct RequestStatus {
         bool fulfilled; // whether the request has been successfully fulfilled
-        bool exists; // whether a requestId exists
+        bool exists;    // whether a requestId exists
         uint256[] randomWords;
     }
-
-    // subscription ID.
+    // subscription ID
     uint256 public s_subscriptionId;
 
     // request IDs
@@ -38,7 +38,8 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     uint256 public maxBidAmount = 1500;
     uint256 public amountToBeBurnt = 5;
     uint256 public amountToWin = 1;
-    uint256 public maxBidsPerAddress = 150
+    uint256 public maxBidPotential = 2;
+    uint256 public maxBidsPerAddress = 150;
     uint256 public maxModulusForToken = 2;
     uint256 public bidsAmount;
     bool private nativePayment = true;
@@ -77,7 +78,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     // Functions
 
     // Constructor 
-    constructor(address addressProvider, address _ethCollector, address _nukefund, uint256 subscriptionId) AddressProviderResolver(addressProvider) VRFConsumerBaseV2Plus(0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B) {
+    constructor(address addressProvider, address _ethCollector, address _nukefund, uint256 subscriptionId) AddressProviderResolver(addressProvider) VRFConsumerBaseV2(0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B) {
         if (_ethCollector == address(0)) revert LottFund__AddressIsZero();
         s_subscriptionId = subscriptionId;
         ethCollector = _ethCollector;
@@ -113,227 +114,23 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
 
 
 
-    // EXTERNAL FUNCTIONS
-
-    function bid(uint256 tokenId) public whenNotPaused nonReentrant {
-        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert LottFund__CallerNotTokenOwner();
-        if (
-            !(
-                traitForgeNft.getApproved(tokenId) == address(this)
-                    || traitForgeNft.isApprovedForAll(msg.sender, address(this))
-            )
-        ) revert NukeFund__ContractNotApproved();
-        canTokenBeBidded(tokenId); //requires
-        bidCountPerRound[currentRound][msg.sender]++;
-        bidsAmount++; // increase total bid amounts as max is currently 1500 (can be altered)
-        tokenIdsBidded.push(tokenId); // store the array of tokenIds that have been bidded
-        tokenBidCount[tokenId]++;
-        if(bidsAmount >= maxBidAmount) { //if bidsAmount reaches 1500 (currently) then pause bidding and roll the lottery
-            pauseBiddingBriefly();
-            BidPayout();
-        }
-    }
-
-    function migrate(address newAddress) external whenNotPaused onlyProtocolMaintainer {
-        require(newAddress != address(0), "Invalid new contract address");
-        uint256 contractBalance = address(this).balance;
-        if (contractBalance > 0) {
-            (bool success, ) = newAddress.call{value: contractBalance}("");
-            require(success, "Failed to transfer ETH");
-        }
-    }
-
-
-
-
-
-    // INTERNAL FUNCTIONS
-
-    function pauseBiddingBriefly() internal whenNotPaused {
-       pausedBids = true; 
-    }
-
-    function BidPayout(uint256[] calldata _randomWords) internal whenNotPaused nonReentrant {
-        if (bidsAmount != maxBidAmount){ //if bidsAmount has no maxxed out then revert
-            revert LottFund__BiddingNotFinished();
-        }  
-        requestRandomWords(nativePayment);
-        uint256[] memory tokensToWin = new uint256[](amountToWin); //memory to stre the tokens to be burnt
-        for (uint256 i = 1; i <= amountToWin; i++) { // A for loop incase we want to add multiple winners later
-            uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds that have been bidded
-            uint256 winnerTokenId = tokenIdsBidded[winnerIndex]; // Get the winner's token ID
-        }
-
-        uint256[] memory tokensToBurn = new uint256[](amountToBeBurnt); //memory to stre the tokens to be burnt
-        for (uint256 i = 1; i <= amountToBeBurnt; i++) { // Use the next 5 numbers to locate the indexes of 5 tokenIds to burn
-            uint256 burnIndex = _randomWords[i] % tokenIdsBidded.length; // Find the burn index
-            tokensToBurn[i - 1] = tokenIdsBidded[burnIndex]; // Store the token ID to burn
-        }
-        burnTokens(tokensToBurn);  // Burn the selected tokenIds
-        
-        uint256 finalNukeFactor = nukeFundAddress.calculateNukeFactor(winnerTokenId); // finalNukeFactor has 5 digits
-        uint256 potentialClaimAmount = (fund * finalNukeFactor) / MAX_DENOMINATOR; // Calculate the potential claim
-            // amount based on the finalNukeFactor
-        uint256 maxAllowedClaimAmount = fund / maxAllowedClaimDivisor; // Define a maximum allowed claim amount as 50%
-            // of the current fund size
-
-        // Directly assign the value to claimAmount based on the condition, removing the redeclaration
-        uint256 claimAmount = finalNukeFactor > nukeFactorMaxParam ? maxAllowedClaimAmount : potentialClaimAmount;
-
-        fund -= claimAmount; // Deduct the claim amount from the fund
-        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        address payable ownerOfWinningToken = payable(traitForgeNft.ownerOf(winnerTokenId));
-
-        (bool success,) = payable(ownerOfWinningToken).call{ value: claimAmount }("");
-        require(success, "Failed to send Ether");
-        resetRound();
-
-        emit PayedOut(winnerTokenId, claimAmount); // Emit the event with the actual claim amount
-        emit FundBalanceUpdated(fund); // Update the fund balance
-        emit TokensBurnt(tokensToBurn);
-    }
-
-    function burnTokens(uint256[] memory tokenIds) internal whenNotPaused {
-      ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-      for (uint256 i = 0; i < tokenIds.length; i++) {
-          traitForgeNft.burn(tokenIds[i]); // Burn each token
-      }
-    }
-
-    function resetRound() internal whenNotPaused {
-        bidsAmount = 0; //reset count of bids
-        delete tokenIdsBidded; // reset array of tokens bidded
-        pausedBids = false; // set bidding back to active
-        currentRound++; // increase round to reset the mapping(uint256 => mapping(address => uint256)) public bidCountPerRound;
-    }
-
-
-
-
-
     // VIEW FUNCTIONS
 
-    function canTokenBeBidded(uint256 tokenId) external view returns (bool){
+    function canTokenBeBidded(uint256 tokenId) public view returns (bool){
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        entropy = traitForgeNft.getTokenEntropy(tokenId); // get entities 6 digit entropy
-        maxBidPotential = entropy % maxModulusForToken; // calculation for maxBidPotenital from entropy eg 999999 = 
+        uint256 entropy = traitForgeNft.getTokenEntropy(tokenId); // get entities 6 digit entropy
+        uint256 tokensMaxBidPotential = entropy % maxModulusForToken; // calculation for maxBidPotenital from entropy eg 999999 = 
         if(entropy == 999_999){ // if golden god (999999) maxBidPotential is +1 over max
-            maxBidPotential = 3
+            tokensMaxBidPotential = 3;
         }
-        bidAmountForToken = tokenBidCount[tokenId]; //how many times has the token bidded before?
-        if(maxBidPotential == 0){ // if tokens maxBidePotential is 0 revert
+        if(tokensMaxBidPotential == 0){ // if tokens maxBidePotential is 0 revert
             revert LottFund__TokenHasNoBidPotential();
         }
-        if(maxBidPotential <= bidAmountForToken){ // if tokens maxBidPotential is less than or equal to how many times it has bidded before then revert
+        if(tokensMaxBidPotential <= tokenBidCount[tokenId]){ // if tokens maxBidPotential is less than or equal to how many times it has bidded before then revert
             revert LottFund__TokenBidAmountDepleted(); // eg if the tokens maxBidPotential is 2 and it has bidded twice then it cannot bid again
         }
         return true; 
     }
-
-    
-    // GETTER FUNCTIONS
-
-    function getFundBalance() public view returns (uint256) {
-        return fund;
-    }
-
-    function getTokenBidAmounts(tokenId) public view returns (uint256) {
-        return tokenBidCount[tokenId];
-    }
-
-    function getMaxBidPotential(tokenId) public view returns (uint256) {
-        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        entropy = traitForgeNft.getTokenEntropy(tokenId);
-        maxBidPotential = entropy % maxModulusForToken;
-        return maxBidPotential;
-    }
-
-    function getTokensBidded() public view returns (uint256[] memory) {
-       return tokenIdsBidded;
-    }
-
-    function _getDevFundAddress() private view returns (address) {
-        return _addressProvider.getDevFund();
-    }
-
-    function _getDaoFundAddress() private view returns (address) {
-        return _addressProvider.getDAOFund();
-    }
-
-    function _getTraitForgeNft() private view returns (ITraitForgeNft) {
-        return ITraitForgeNft(_addressProvider.getTraitForgeNft());
-    }
-
-    function _getAirdrop() private view returns (IAirdrop) {
-        return IAirdrop(_addressProvider.getAirdrop());
-    }
-
-
-
-    // SETTER FUNCTIONS
-
-    function setNukeFundAddress(address _nukeFundAddress) external onlyProtocolMaintainer {
-        nukeFundAddress = _nukeFundAddress;
-    }
-
-    function setTaxCut(uint256 _taxCut) external onlyProtocolMaintainer {
-        require(_taxCut <= BPS, "Tax cut exceeds maximum limit.");
-        taxCut = _taxCut;
-    }
-
-    function setMaxAllowedClaimDivisor(uint256 _divisor) external onlyProtocolMaintainer {
-        require(_divisor > 0, "Divisor must be greater than 0.");
-        maxAllowedClaimDivisor = _divisor;
-    }
-
-    function setMaxModulusForToken(uint256 _number) external onlyProtocolMaintainer{
-        maxModulusForToken = _number
-    }
-
-    function setNukeFactorMaxParam(uint256 _nukeFactorMaxParam) external onlyProtocolMaintainer {
-        require(_nukeFactorMaxParam <= MAX_DENOMINATOR, "Invalid nuke factor parameter.");
-        nukeFactorMaxParam = _nukeFactorMaxParam;
-    }
-
-    function setEthCollector(address _ethCollector) external onlyProtocolMaintainer {
-        ethCollector = _ethCollector;
-    }
-
-    function setMaxBidsPerAddress(uint256 _limit) external onlyProtocolMaintainer{
-        maxBidsPerAddress = _limit;
-    }
-
-    function setNativePayment(bool isTrue) external onlyProtocolMaintainer {
-        require(isTrue != nativePayment);
-        nativePayment = isTrue;
-    }
-
-    function setAmountToBeBurnt(uint256 _amountToBeBurnt) external onlyProtocolMaintainer {
-       amountToBeBurnt = _amountToBeBurnt;
-    }
-
-    function setAmountToWin(uint256 _amountToWin) external onlyProtocolMaintainer {
-        amountToWin = _amountToWin;
-    }
-
-    function setPausedBids(bool _pausedBids) external onlyProtocolMaintainer {
-        pausedBids = _pausedBids;
-    }
-
-    function setMaxBidAmount(uint256 _maxBidAmount) external onlyProtocolMaintainer {
-        maxBidAmount = _maxBidAmount;
-    }
-
-    function pause() public onlyProtocolMaintainer {
-        _pause();
-    }
-
-    function unpause() public onlyProtocolMaintainer {
-        _unpause();
-    }
-
-    
 
     // CHAINLINK VRF FUNCTIONS
 
@@ -398,5 +195,203 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
 
     function setCallbackGasLimit(uint32 _limit) external onlyProtocolMaintainer {
         callbackGasLimit = _limit;
+    }
+
+    
+    // GETTER FUNCTIONS
+
+    function getFundBalance() public view returns (uint256) {
+        return fund;
+    }
+
+    function getTokenBidAmounts(uint256 tokenId) public view returns (uint256) {
+        return tokenBidCount[tokenId];
+    }
+
+    function getMaxBidPotential(uint256 tokenId) public view returns (uint256) {
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+        uint256 entropy = traitForgeNft.getTokenEntropy(tokenId);
+        uint256 tokenMaxBidPotential = entropy % maxModulusForToken;
+        return tokenMaxBidPotential;
+    }
+
+    function getTokensBidded() public view returns (uint256[] memory) {
+       return tokenIdsBidded;
+    }
+
+    function _getDevFundAddress() private view returns (address) {
+        return _addressProvider.getDevFund();
+    }
+
+    function _getDaoFundAddress() private view returns (address) {
+        return _addressProvider.getDAOFund();
+    }
+
+    function _getTraitForgeNft() private view returns (ITraitForgeNft) {
+        return ITraitForgeNft(_addressProvider.getTraitForgeNft());
+    }
+
+    function _getAirdrop() private view returns (IAirdrop) {
+        return IAirdrop(_addressProvider.getAirdrop());
+    }
+
+
+
+
+    // EXTERNAL FUNCTIONS
+
+    function bid(uint256 tokenId) public whenNotPaused nonReentrant {
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+        if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert LottFund__CallerNotTokenOwner();
+        if (
+            !(
+                traitForgeNft.getApproved(tokenId) == address(this)
+                    || traitForgeNft.isApprovedForAll(msg.sender, address(this))
+            )
+        ) revert LottFund__ContractNotApproved();
+        canTokenBeBidded(tokenId); //requires
+        bidCountPerRound[currentRound][msg.sender]++;
+        bidsAmount++; // increase total bid amounts as max is currently 1500 (can be altered)
+        tokenIdsBidded.push(tokenId); // store the array of tokenIds that have been bidded
+        tokenBidCount[tokenId]++;
+        if(bidsAmount >= maxBidAmount) { //if bidsAmount reaches 1500 (currently) then pause bidding and roll the lottery
+            pauseBiddingBriefly();
+            BidPayout();
+        }
+    }
+
+    function migrate(address newAddress) external whenNotPaused onlyProtocolMaintainer {
+        require(newAddress != address(0), "Invalid new contract address");
+        uint256 contractBalance = address(this).balance;
+        if (contractBalance > 0) {
+            (bool success, ) = newAddress.call{value: contractBalance}("");
+            require(success, "Failed to transfer ETH");
+        }
+    }
+
+
+
+
+
+    // INTERNAL FUNCTIONS
+
+    function pauseBiddingBriefly() internal whenNotPaused {
+       pausedBids = true; 
+    }
+
+    function BidPayout(uint256[] calldata _randomWords) internal whenNotPaused nonReentrant {
+        if (bidsAmount != maxBidAmount){ //if bidsAmount has no maxxed out then revert
+            revert LottFund__BiddingNotFinished();
+        }  
+        requestRandomWords(nativePayment);
+        uint256[] memory tokensToWin = new uint256[](amountToWin); //memory to stre the tokens to be burnt
+        for (uint256 i = 1; i <= amountToWin; i++) { // A for loop incase we want to add multiple winners later
+            uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds that have been bidded
+            uint256 winnerTokenId = tokenIdsBidded[winnerIndex]; // Get the winner's token ID
+            uint256 finalNukeFactor = nukeFundAddress.calculateNukeFactor(winnerTokenId); // finalNukeFactor has 5 digits
+            uint256 potentialClaimAmount = (fund * finalNukeFactor) / MAX_DENOMINATOR; // Calculate the potential claim
+            // amount based on the finalNukeFactor
+            uint256 maxAllowedClaimAmount = fund / maxAllowedClaimDivisor; // Define a maximum allowed claim amount as 50%
+            // of the current fund size
+
+            // Directly assign the value to claimAmount based on the condition, removing the redeclaration
+            uint256 claimAmount = finalNukeFactor > nukeFactorMaxParam ? maxAllowedClaimAmount : potentialClaimAmount;
+
+            fund -= claimAmount; // Deduct the claim amount from the fund
+            ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+            address payable ownerOfWinningToken = payable(traitForgeNft.ownerOf(winnerTokenId));
+            (bool success,) = payable(ownerOfWinningToken).call{ value: claimAmount }("");
+            require(success, "Failed to send Ether");
+        }
+
+        uint256[] memory tokensToBurn = new uint256[](amountToBeBurnt); //memory to stre the tokens to be burnt
+        for (uint256 i = 1; i <= amountToBeBurnt; i++) { // Use the next 5 numbers to locate the indexes of 5 tokenIds to burn
+            uint256 burnIndex = _randomWords[i] % tokenIdsBidded.length; // Find the burn index
+            tokensToBurn[i - 1] = tokenIdsBidded[burnIndex]; // Store the token ID to burn
+        }
+        burnTokens(tokensToBurn);  // Burn the selected tokenIds
+        resetRound();
+
+        emit PayedOut(tokensToWin); // Emit the event with the actual claim amount
+        emit FundBalanceUpdated(fund); // Update the fund balance
+        emit TokensBurnt(tokensToBurn);
+    }
+
+    function burnTokens(uint256[] memory tokenIds) internal whenNotPaused {
+      ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+      for (uint256 i = 0; i < tokenIds.length; i++) {
+          traitForgeNft.burn(tokenIds[i]); // Burn each token
+      }
+    }
+
+    function resetRound() internal whenNotPaused {
+        bidsAmount = 0; //reset count of bids
+        delete tokenIdsBidded; // reset array of tokens bidded
+        pausedBids = false; // set bidding back to active
+        currentRound++; // increase round to reset the mapping(uint256 => mapping(address => uint256)) public bidCountPerRound;
+    }
+
+
+
+    // SETTER FUNCTIONS
+
+    function setNukeFundAddress(address _nukeFundAddress) external onlyProtocolMaintainer {
+        nukeFundAddress = _nukeFundAddress;
+    }
+
+    function setTaxCut(uint256 _taxCut) external onlyProtocolMaintainer {
+        require(_taxCut <= BPS, "Tax cut exceeds maximum limit.");
+        taxCut = _taxCut;
+    }
+
+    function setMaxAllowedClaimDivisor(uint256 _divisor) external onlyProtocolMaintainer {
+        require(_divisor > 0, "Divisor must be greater than 0.");
+        maxAllowedClaimDivisor = _divisor;
+    }
+
+    function setMaxModulusForToken(uint256 _number) external onlyProtocolMaintainer{
+        maxModulusForToken = _number;
+    }
+
+    function setNukeFactorMaxParam(uint256 _nukeFactorMaxParam) external onlyProtocolMaintainer {
+        require(_nukeFactorMaxParam <= MAX_DENOMINATOR, "Invalid nuke factor parameter.");
+        nukeFactorMaxParam = _nukeFactorMaxParam;
+    }
+
+    function setEthCollector(address _ethCollector) external onlyProtocolMaintainer {
+        ethCollector = _ethCollector;
+    }
+
+    function setMaxBidsPerAddress(uint256 _limit) external onlyProtocolMaintainer{
+        maxBidsPerAddress = _limit;
+    }
+
+    function setNativePayment(bool isTrue) external onlyProtocolMaintainer {
+        require(isTrue != nativePayment);
+        nativePayment = isTrue;
+    }
+
+    function setAmountToBeBurnt(uint256 _amountToBeBurnt) external onlyProtocolMaintainer {
+       amountToBeBurnt = _amountToBeBurnt;
+    }
+
+    function setAmountToWin(uint256 _amountToWin) external onlyProtocolMaintainer {
+        amountToWin = _amountToWin;
+    }
+
+    function setPausedBids(bool _pausedBids) external onlyProtocolMaintainer {
+        pausedBids = _pausedBids;
+    }
+
+    function setMaxBidAmount(uint256 _maxBidAmount) external onlyProtocolMaintainer {
+        maxBidAmount = _maxBidAmount;
+    }
+
+    function pause() public onlyProtocolMaintainer {
+        _pause();
+    }
+
+    function unpause() public onlyProtocolMaintainer {
+        _unpause();
     }
 }

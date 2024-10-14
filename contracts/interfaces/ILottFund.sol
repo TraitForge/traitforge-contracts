@@ -2,13 +2,6 @@
 pragma solidity ^0.8.20;
 
 interface ILottFund {
-    // Structs
-    struct RequestStatus {
-        bool fulfilled; // whether the request has been successfully fulfilled
-        bool exists;    // whether a requestId exists
-        uint256[] randomWords;
-    }
-
     // Events
     event RequestSent(uint256 requestId, uint32 numWords);
     event RequestFulfilled(uint256 requestId, uint256[] randomWords);
@@ -31,7 +24,7 @@ interface ILottFund {
     function setTaxCut(uint256 _taxCut) external;
     function setMaxAllowedClaimDivisor(uint256 _divisor) external;
     function setMaxBidsPerAddress(uint256 _limit) external;
-    function setAmountToWin(uint256 _amountToWin) external
+    function setAmountToWin(uint256 _amountToWin) external;
     function setNukeFactorMaxParam(uint256 _nukeFactorMaxParam) external;
     function setEthCollector(address _ethCollector) external;
     function setNativePayment(bool isTrue) external;

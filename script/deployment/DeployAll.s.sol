@@ -7,7 +7,9 @@ import { console } from "@forge-std/console.sol";
 import { Airdrop } from "contracts/Airdrop.sol";
 import { DevFund } from "contracts/DevFund.sol";
 import { DAOFund } from "contracts/DAOFund.sol";
+import { FundRouter } from "contracts/NukeRouter.sol";
 import { NukeFund } from "contracts/NukeFund.sol";
+import { LottFund } from "contracts/LottFund.sol";
 import { EntityForging } from "contracts/EntityForging.sol";
 import { EntityTrading } from "contracts/EntityTrading.sol";
 import { EntropyGenerator } from "contracts/EntropyGenerator.sol";
@@ -23,7 +25,9 @@ contract DeployAll is BaseScript {
         address newAirdropAddress = _deployAirdrop();
         address newDevFundAddress = _deployDevFund();
         // address newDaoFundAddress = _deployDaoFund();
+        address newLottFundAddress = _deployLottFund();
         address newNukeFundAddress = _deployNukeFund();
+        address newFundRouterAddress = _deployFundRouter();
         address newEntityForgingAddress = _deployEntityForging();
         address newEntityTradingAddress = _deployEntityTrading();
         address newEntropyGeneratorAddress = _deployEntropyGenerator();
@@ -34,6 +38,8 @@ contract DeployAll is BaseScript {
         console.log("DevFund deployed at address: ", newDevFundAddress);
         // console.log("DAOFund deployed at address: ", newDaoFundAddress);
         console.log("NukeFund deployed at address: ", newNukeFundAddress);
+        console.log("LottFund deployed at address: ", newLottFundAddress);
+        console.log("FundRouter deployed at address: ", newFundRouterAddress);
         console.log("EntityForging deployed at address: ", newEntityForgingAddress);
         console.log("EntityTrading deployed at address: ", newEntityTradingAddress);
         console.log("EntropyGenerator deployed at address: ", newEntropyGeneratorAddress);
@@ -57,6 +63,14 @@ contract DeployAll is BaseScript {
 
     function _deployNukeFund() internal returns (address) {
         return address(new NukeFund(addressProvider, ethCollector));
+    }
+
+    function _deployLottFund() internal returns (address) {
+        return address(new LottFund(addressProvider, ethCollector, nukeFund, 93583552556180380494622873604450265439540157164614218152369824305078161896524));
+    }
+
+    function _deployNukeRouter() internal returns (address) {
+        return address(new FundRouter(newNukeFundAddress, newLottFundAddress));
     }
 
     function _deployEntityForging() internal returns (address) {

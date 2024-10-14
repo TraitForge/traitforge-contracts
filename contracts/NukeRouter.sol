@@ -63,10 +63,4 @@ contract FundRouter {
     }
 
 
-    // Fallback for any unintended direct transfers
-    fallback() external payable {
-        receive(); // Same logic as receive()
-    }
-
-
 }
