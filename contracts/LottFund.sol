@@ -39,7 +39,7 @@ contract LottFund is VRFConsumerBaseV2, ILottFund, AddressProviderResolver, Reen
     uint256 public amountToBeBurnt = 5;
     uint256 public amountToWin = 1;
     uint256 public maxBidPotential = 2;
-    uint256 public maxBidsPerAddress = 150;
+    uint256 public maxBidsPerAddress = 50;
     uint256 public maxModulusForToken = 2;
     uint256 public bidsAmount;
     bool private nativePayment = true;
@@ -72,6 +72,7 @@ contract LottFund is VRFConsumerBaseV2, ILottFund, AddressProviderResolver, Reen
     error LottFund__BiddingNotFinished();
     error LottFund__TokenBidAmountDepleted();
     error LottFund__TokenHasNoBidPotential();
+    error LottFund__AddressHasBiddedTooManyTimes();
 
     // Modifiers
 
@@ -259,6 +260,40 @@ contract LottFund is VRFConsumerBaseV2, ILottFund, AddressProviderResolver, Reen
             BidPayout();
         }
     }
+
+    
+    function batchBid(uint256[] memory tokenIds) public whenNotPaused nonReentrant {
+        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+        address sender = msg.sender;
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            uint256 tokenId = tokenIds[i];
+    
+            if (bidCountPerRound[currentRound][sender] >= maxBidsPerAddress) {
+                revert LottFund__AddressHasBiddedTooManyTimes();
+            }
+            if (traitForgeNft.ownerOf(tokenId) != sender) {
+               revert LottFund__CallerNotTokenOwner();
+            }
+            if (
+               !(traitForgeNft.getApproved(tokenId) == address(this) ||
+                traitForgeNft.isApprovedForAll(sender, address(this)))
+            ) {
+               revert LottFund__ContractNotApproved();
+            }
+            canTokenBeBidded(tokenId); 
+            bidCountPerRound[currentRound][sender]++;
+            bidsAmount++;
+            tokenIdsBidded.push(tokenId);
+            tokenBidCount[tokenId]++;
+        }
+
+        if (bidsAmount >= maxBidAmount) {
+            pauseBiddingBriefly();
+            BidPayout();
+        }
+    }
+
 
     function migrate(address newAddress) external whenNotPaused onlyProtocolMaintainer {
         require(newAddress != address(0), "Invalid new contract address");
