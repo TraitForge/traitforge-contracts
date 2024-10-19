@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import { console2 } from "@forge-std/console2.sol";
 import { stdJson } from "@forge-std/StdJson.sol";
 
 struct Config {
@@ -23,12 +22,17 @@ library ConfigLib {
     string internal constant ENTITY_FORGING = "$.entityForging";
     string internal constant ENTITY_TRADING = "$.entityTrading";
     string internal constant ENTROPY_GENERATOR = "$.entropyGenerator";
-    string internal constant NUKE_FUND = "$.nukeFund";
+    string internal constant NUKE_ROUTER = "$.nukeRouter";
     string internal constant TRAIT = "$.trait";
     string internal constant TRAIT_FORGE_NFT = "$.traitForgeNft";
     string internal constant ETH_COLLECTOR = "$.ethCollector";
     string internal constant UNISWAP_ROUTER = "$.uniswapRouter";
     string internal constant ROOT_HASH = "$.rootHash";
+    string internal constant SUBSCRIPTIONID = "$.subscriptionId";
+    string internal constant VRFCOORDINATOR = "$.vrfCoordinator";
+
+    string internal constant NUKE_FUND = "$.nukeFund";
+    string internal constant LOTT_FUND = "$.lottFund";
 
     function getAddress(Config storage config, string memory key) internal view returns (address) {
         return config.json.readAddress(string.concat("$.", key));
@@ -97,8 +101,8 @@ library ConfigLib {
         return config.json.readAddress(ENTROPY_GENERATOR);
     }
 
-    function getNukeFundAddress(Config storage config) internal view returns (address) {
-        return config.json.readAddress(NUKE_FUND);
+    function getNukeRouterAddress(Config storage config) internal view returns (address) {
+        return config.json.readAddress(NUKE_ROUTER);
     }
 
     function getTraitAddress(Config storage config) internal view returns (address) {
@@ -119,5 +123,21 @@ library ConfigLib {
 
     function getRootHash(Config storage config) internal view returns (bytes32) {
         return config.json.readBytes32(ROOT_HASH);
+    }
+
+    function getNukeFundAddress(Config storage config) internal view returns (address) {
+        return config.json.readAddress(NUKE_FUND);
+    }
+
+    function getLottFundAddress(Config storage config) internal view returns (address) {
+        return config.json.readAddress(LOTT_FUND);
+    }
+
+    function getSubscriptionId(Config storage config) internal view returns (uint256) {
+        return config.json.readUint(SUBSCRIPTIONID);
+    }
+
+    function getVrfCoordinatorAddress(Config storage config) internal view returns (address) {
+        return config.json.readAddress(VRFCOORDINATOR);
     }
 }

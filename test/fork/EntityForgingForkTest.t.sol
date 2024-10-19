@@ -948,7 +948,7 @@ contract EntityForgingForkTest is Fork_Test {
         super.setUp();
         AddressProvider ap = AddressProvider(addressProvider);
         vm.prank(whaleETH);
-        payable(sender).call{ value: 1 ether }("");
+        (bool success, ) = payable(sender).call{ value: 1 ether }("");
     }
 
     function test_listForForging() public {

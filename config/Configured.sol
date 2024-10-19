@@ -22,6 +22,8 @@ contract Configured is StdChains {
     address internal ethCollector;
     address internal uniswapRouter;
     bytes32 internal rootHash;
+    uint256 internal subscriptionId;
+    address internal vrfCoordinator;
 
     address internal airdrop;
     address internal daoFund;
@@ -29,10 +31,12 @@ contract Configured is StdChains {
     address internal entityForging;
     address internal entityTrading;
     address internal entropyGenerator;
-    address internal nukeFund;
+    address internal nukeRouter;
     address internal trait;
     address internal traitForgeNft;
-    
+
+    address internal nukeFund;
+    address internal lottFund;
 
     function _network() internal virtual returns (string memory) {
         Chain memory currentChain = getChain(block.chainid);
@@ -62,6 +66,8 @@ contract Configured is StdChains {
         ethCollector = config.getEthCollectorAddress();
         uniswapRouter = config.getUniswapRouterAddress();
         rootHash = config.getRootHash();
+        subscriptionId = config.getSubscriptionId();
+        vrfCoordinator = config.getVrfCoordinatorAddress();
 
         airdrop = config.getAirdropAddress();
         daoFund = config.getDaoFundAddress();
@@ -69,9 +75,11 @@ contract Configured is StdChains {
         entityForging = config.getEntityForgingAddress();
         entityTrading = config.getEntityTradingAddress();
         entropyGenerator = config.getEntropyGeneratorAddress();
-        nukeFund = config.getNukeFundAddress();
+        nukeRouter = config.getNukeRouterAddress();
         trait = config.getTraitAddress();
         traitForgeNft = config.getTraitForgeNftAddress();
-        
+
+        nukeFund = config.getNukeFundAddress();
+        lottFund = config.getLottFundAddress();
     }
 }

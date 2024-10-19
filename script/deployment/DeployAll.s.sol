@@ -7,7 +7,7 @@ import { console } from "@forge-std/console.sol";
 import { Airdrop } from "contracts/Airdrop.sol";
 import { DevFund } from "contracts/DevFund.sol";
 import { DAOFund } from "contracts/DAOFund.sol";
-import { FundRouter } from "contracts/NukeRouter.sol";
+import { NukeRouter } from "contracts/NukeRouter.sol";
 import { NukeFund } from "contracts/NukeFund.sol";
 import { LottFund } from "contracts/LottFund.sol";
 import { EntityForging } from "contracts/EntityForging.sol";
@@ -27,7 +27,7 @@ contract DeployAll is BaseScript {
         // address newDaoFundAddress = _deployDaoFund();
         address newLottFundAddress = _deployLottFund();
         address newNukeFundAddress = _deployNukeFund();
-        address newFundRouterAddress = _deployFundRouter();
+        address newFundRouterAddress = _deployNukeRouter();
         address newEntityForgingAddress = _deployEntityForging();
         address newEntityTradingAddress = _deployEntityTrading();
         address newEntropyGeneratorAddress = _deployEntropyGenerator();
@@ -66,11 +66,11 @@ contract DeployAll is BaseScript {
     }
 
     function _deployLottFund() internal returns (address) {
-        return address(new LottFund(addressProvider, ethCollector, nukeFund, 93583552556180380494622873604450265439540157164614218152369824305078161896524));
+        return address(new LottFund(addressProvider, ethCollector, nukeFund, subscriptionId, vrfCoordinator));
     }
 
     function _deployNukeRouter() internal returns (address) {
-        return address(new FundRouter(newNukeFundAddress, newLottFundAddress));
+        return address(new NukeRouter(addressProvider, nukeFund, lottFund));
     }
 
     function _deployEntityForging() internal returns (address) {

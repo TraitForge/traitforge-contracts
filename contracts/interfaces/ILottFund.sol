@@ -37,7 +37,4 @@ interface ILottFund {
     function setNumWords(uint32 _amount) external;
     function setKeyHash(bytes32 _keyHash) external;
     function setCallbackGasLimit(uint32 _limit) external;
-
-    // Chainlink VRF Functions
-    function requestRandomWords(bool enableNativePayment) external returns (uint256 requestId);
 }
