@@ -15,6 +15,9 @@ import { NukeFund } from "contracts/NukeFund.sol";
 import { Trait } from "contracts/Trait.sol";
 import { TraitForgeNft } from "contracts/TraitForgeNft.sol";
 import { Roles } from "contracts/libraries/Roles.sol";
+import { NukeRouter } from "contracts/NukeRouter.sol";
+import { LottFund } from "contracts/LottFund.sol";
+import { VRFCoordinatorV2Mock } from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
 
 contract Deploys is Test {
     address internal _defaultAdmin = makeAddr("defaultAdmin");
@@ -36,10 +39,13 @@ contract Deploys is Test {
     EntityForging internal _entityForging;
     EntityTrading internal _entityTrading;
     EntropyGenerator internal _entropyGenerator;
+    NukeRouter internal _nukeRouter;
+    LottFund internal _lottFund;
     NukeFund internal _nukeFund;
     Trait internal _trait;
     TraitForgeNft internal _traitForgeNft;
     AccessController internal _accessController;
+    VRFCoordinatorV2Mock internal _vrfCoordinator;
 
     function setUp() public virtual {
         _deployAddressProvider();
@@ -49,7 +55,7 @@ contract Deploys is Test {
         _deployEntityForging();
         _deployEntityTrading();
         _deployEntropyGenerator();
-        _deployNukeFund();
+        _deployNukeRouter();
         _deployTrait();
         _deployTraitForgeNft();
     }
@@ -106,11 +112,23 @@ contract Deploys is Test {
         _addressProvider.setEntropyGenerator(address(_entropyGenerator));
     }
 
-    function _deployNukeFund() private {
+    function _deployNukeRouter() private {
         address ethCollector = makeAddr("ethCollector");
         _nukeFund = new NukeFund(address(_addressProvider), ethCollector);
-        vm.prank(_protocolMaintainer);
-        _addressProvider.setNukeFund(address(_nukeFund));
+        deal(_protocolMaintainer, 1 ether);
+        vm.startPrank(_protocolMaintainer);
+        VRFCoordinatorV2Mock vrfCoordinator = (new VRFCoordinatorV2Mock(0.00001 ether, 0));
+        uint64 subId = vrfCoordinator.createSubscription();
+        vrfCoordinator.fundSubscription(subId, 1 ether);
+        _lottFund = (
+            new LottFund(
+                address(_addressProvider), ethCollector, address(_nukeFund), uint256(subId), address(vrfCoordinator)
+            )
+        );
+        vrfCoordinator.addConsumer(subId, address(_lottFund));
+        _nukeRouter = new NukeRouter(address(_addressProvider), address(_nukeFund), address(_lottFund));
+        _addressProvider.setNukeFund(address(_nukeRouter));
+        vm.stopPrank();
     }
 
     function _deployTrait() private {

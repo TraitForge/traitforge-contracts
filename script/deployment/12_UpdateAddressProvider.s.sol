@@ -18,7 +18,7 @@ contract UpdateAddressProvider is BaseScript {
         ap.setEntityForging(entityForging);
         ap.setEntityTrading(entityTrading);
         ap.setEntropyGenerator(entropyGenerator);
-        ap.setNukeFund(nukeFund);
+        ap.setNukeFund(nukeRouter);
         ap.setTrait(trait);
         ap.setTraitForgeNft(traitForgeNft);
     }

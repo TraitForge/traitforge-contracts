@@ -57,10 +57,10 @@ contract TraitForgeNft_MintToken is TraitForgeNftTest {
         uint256 price = _traitForgeNft.calculateMintPrice();
         vm.prank(user);
         _traitForgeNft.mintToken{ value: price }(proofs);
-        uint256 fees = _nukeFund.taxCut() * price / 10_000; //_nukeFund.BPS();
+        uint256 fees = _lottFund.taxCut() * price / 10_000; //_nukeFund.BPS();
         assertEq(_traitForgeNft.totalSupply(), 1);
         assertEq(_traitForgeNft.balanceOf(user), 1);
-        assertEq(address(_nukeFund).balance, price - fees);
-        assertEq(_nukeFund.ethCollector().balance, fees); // airdrop has not started yet && totalDevWeight == 0
+        assertEq(address(_lottFund).balance, price - fees);
+        assertEq(_lottFund.ethCollector().balance, fees); // airdrop has not started yet && totalDevWeight == 0
     }
 }

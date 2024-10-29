@@ -74,7 +74,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     error LottFund__DivisorIsZero();
     error LottFund__BiddingNotFinished();
     error LottFund__TokenBidAmountDepleted();
-    error LottFund__TokenHasNoBidPotential();
+    error LottFund__TokenCannotBeBidded();
     error LottFund__AddressHasBiddedTooManyTimes();
 
     constructor(
@@ -129,7 +129,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
                     || traitForgeNft.isApprovedForAll(msg.sender, address(this))
             )
         ) revert LottFund__ContractNotApproved();
-        canTokenBeBidded(tokenId); //requires
+        if (!canTokenBeBidded(tokenId)) revert LottFund__TokenCannotBeBidded();
         bidCountPerRound[currentRound][msg.sender]++;
         bidsAmount++; // increase total bid amounts as max is currently 1500 (can be altered)
         tokenIdsBidded.push(tokenId); // store the array of tokenIds that have been bidded
@@ -189,19 +189,20 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     function canTokenBeBidded(uint256 tokenId) public view returns (bool) {
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         uint256 entropy = traitForgeNft.getTokenEntropy(tokenId); // get entities 6 digit entropy
-        uint256 tokensMaxBidPotential = entropy % maxModulusForToken; // calculation for maxBidPotenital from entropy eg
             // 999999 =
         if (entropy == 999_999) {
             // if golden god (999999) maxBidPotential is +1 over max
-            tokensMaxBidPotential = 3;
+            return true;
         }
+
+        uint256 tokensMaxBidPotential = entropy % maxModulusForToken; // calculation for maxBidPotenital from entropy eg
         if (tokensMaxBidPotential == 0) {
             // if tokens maxBidePotential is 0 revert
-            revert LottFund__TokenHasNoBidPotential();
+            return false;
         }
         if (tokensMaxBidPotential <= tokenBidCount[tokenId]) {
             // if tokens maxBidPotential is less than or equal to how many times it has bidded before then revert
-            revert LottFund__TokenBidAmountDepleted(); // eg if the tokens maxBidPotential is 2 and it has bidded twice
+            return false; // eg if the tokens maxBidPotential is 2 and it has bidded twice
                 // then it cannot bid again
         }
         return true;
