@@ -354,7 +354,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             revert LottFund__BiddingNotFinished();
         }
         requestRandomWords(nativePayment);
-        uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
+     //   uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
         for (uint256 i = 1; i <= quantityToWin; i++) {
             // A for loop incase we want to add multiple winners later
             uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds

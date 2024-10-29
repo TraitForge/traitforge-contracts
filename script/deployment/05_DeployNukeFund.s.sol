@@ -10,7 +10,7 @@ import { NukeFund } from "contracts/NukeFund.sol";
 import { NukeRouter } from "contracts/NukeRouter.sol";
 import { LottFund } from "contracts/LottFund.sol";
 
-contract DeployNukeRouter is BaseScript {
+contract DeployNukeFund is BaseScript {
     function run() public virtual initConfig broadcast {
         if (addressProvider == address(0)) {
             revert AddressProviderAddressIsZero();

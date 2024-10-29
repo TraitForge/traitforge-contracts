@@ -25,8 +25,8 @@ contract DeployAll is BaseScript {
         address newAirdropAddress = _deployAirdrop();
         address newDevFundAddress = _deployDevFund();
         // address newDaoFundAddress = _deployDaoFund();
-        address newLottFundAddress = _deployLottFund();
-        address newNukeFundAddress = _deployNukeFund();
+        //address newLottFundAddress = _deployLottFund();
+        //address newNukeFundAddress = _deployNukeFund();
         address newFundRouterAddress = _deployNukeRouter();
         address newEntityForgingAddress = _deployEntityForging();
         address newEntityTradingAddress = _deployEntityTrading();
@@ -37,8 +37,8 @@ contract DeployAll is BaseScript {
         console.log("Airdrop deployed at address: ", newAirdropAddress);
         console.log("DevFund deployed at address: ", newDevFundAddress);
         // console.log("DAOFund deployed at address: ", newDaoFundAddress);
-        console.log("NukeFund deployed at address: ", newNukeFundAddress);
-        console.log("LottFund deployed at address: ", newLottFundAddress);
+        //console.log("NukeFund deployed at address: ", newNukeFundAddress);
+        //console.log("LottFund deployed at address: ", newLottFundAddress);
         console.log("FundRouter deployed at address: ", newFundRouterAddress);
         console.log("EntityForging deployed at address: ", newEntityForgingAddress);
         console.log("EntityTrading deployed at address: ", newEntityTradingAddress);
@@ -61,13 +61,13 @@ contract DeployAll is BaseScript {
     //     return address(new DAOFund(uniswapRouter, addressProvider));
     // }
 
-    function _deployNukeFund() internal returns (address) {
-        return address(new NukeFund(addressProvider, ethCollector));
-    }
-
-    function _deployLottFund() internal returns (address) {
-        return address(new LottFund(addressProvider, ethCollector, nukeFund, subscriptionId, vrfCoordinator));
-    }
+   // function _deployNukeFund() internal returns (address) {
+   //     return address(new NukeFund(addressProvider, ethCollector));
+   // }
+//
+   // function _deployLottFund() internal returns (address) {
+   //     return address(new LottFund(addressProvider, ethCollector, nukeFund, subscriptionId, vrfCoordinator));
+   // }
 
     function _deployNukeRouter() internal returns (address) {
         return address(new NukeRouter(addressProvider, nukeFund, lottFund));

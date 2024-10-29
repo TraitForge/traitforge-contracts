@@ -51,11 +51,11 @@ deploy-all:
 
 update-addressProvider:
 	@echo "Updating AddressProvider contract on $(NETWORK)..."
-	forge script script/deployment/11_UpdateAddressProvider.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/12_UpdateAddressProvider.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 
 update-roles:
 	@echo "Updating roles on $(NETWORK)..."
-	forge script script/deployment/12_UpdateRoles.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/13_UpdateRoles.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 ############################################################################################################
 
 
@@ -92,17 +92,25 @@ deploy-nukeFund:
 	@echo "Deploying nukeFund contract on $(NETWORK)..."
 	forge script script/deployment/05_DeployNukeFund.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 
+deploy-lottFund:
+	@echo "Deploying nukeFund contract on $(NETWORK)..."
+	forge script script/deployment/06_DeployLottFund.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+
+deploy-nukeRouter:
+	@echo "Deploying nukeFund contract on $(NETWORK)..."
+	forge script script/deployment/07_DeployNukeRouter.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+
 deploy-entityForging:
 	@echo "Deploying entityForging contract on $(NETWORK)..."
-	forge script script/deployment/06_DeployEntityForging.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/08_DeployEntityForging.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 
 deploy-entityTrading:
 	@echo "Deploying entityTrading contract on $(NETWORK)..."
-	forge script script/deployment/07_DeployEntityTrading.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/09_DeployEntityTrading.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 
 deploy-entropyGenerator:
 	@echo "Deploying entropyGenerator contract on $(NETWORK)..."
-	forge script script/deployment/08_DeployEntropyGenerator.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/10_DeployEntropyGenerator.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 
 deploy-trait:
 	@echo "Deploying trait contract on $(NETWORK)..."
@@ -110,7 +118,7 @@ deploy-trait:
 
 deploy-traitForgeNft:
 	@echo "Deploying traitForgeNft contract on $(NETWORK)..."
-	forge script script/deployment/10_DeployTraitForgeNft.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
+	forge script script/deployment/11_DeployTraitForgeNft.s.sol --rpc-url $(NETWORK) --broadcast --verify --optimize
 
 
 
