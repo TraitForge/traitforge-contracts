@@ -76,6 +76,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     error LottFund__TokenBidAmountDepleted();
     error LottFund__TokenCannotBeBidded();
     error LottFund__AddressHasBiddedTooManyTimes(address caller);
+    error LottFund__BiddingIsPaused();
 
     constructor(
         address addressProvider,
@@ -121,6 +122,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function bid(uint256 tokenId) public whenNotPaused nonReentrant {
+        if (pausedBids) revert LottFund__BiddingIsPaused();
         if (bidCountPerRound[currentRound][msg.sender] >= maxBidsPerAddress) {
             revert LottFund__AddressHasBiddedTooManyTimes(msg.sender);
         }
@@ -146,6 +148,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function batchBid(uint256[] memory tokenIds) public whenNotPaused nonReentrant {
+        if (pausedBids) revert LottFund__BiddingIsPaused();
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         address sender = msg.sender;
 

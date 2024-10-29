@@ -14,6 +14,15 @@ contract LottFundTest_Bid is LottFundTest {
         _lottFund.bid(1);
     }
 
+    function testRevert_lottFund_bid_whenPausedBids() public {
+        vm.prank(_protocolMaintainer);
+        _lottFund.setPausedBids(true);
+
+        vm.expectRevert(LottFund.LottFund__BiddingIsPaused.selector);
+        vm.prank(_randomUser);
+        _lottFund.bid(1);
+    }
+
     function testRevert_lottFund_bid_whenCallerAddressHasBiddedTwoManyTimes() public {
         uint256 maxBidsPerAddress = _lottFund.maxBidsPerAddress();
         _mintTraitForgeNft(user, 1000);

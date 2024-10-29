@@ -5,13 +5,25 @@ import { LottFundTest } from "test/integration/concrete/lottFund/LottFundTest.t.
 import { LottFund } from "contracts/LottFund.sol";
 
 contract LottFundTest_BatchBid is LottFundTest {
-    function testRevert_lottFund_Batchbid_whenPaused() public {
+    function testRevert_lottFund_batchBid_whenPaused() public {
         vm.prank(_protocolMaintainer);
         _lottFund.pause();
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 1;
 
         vm.expectRevert(bytes("Pausable: paused"));
+        vm.prank(_randomUser);
+        _lottFund.batchBid(tokenIds);
+    }
+
+    function testRevert_lottFund_batchBid_whenPausedBids() public {
+        vm.prank(_protocolMaintainer);
+        _lottFund.setPausedBids(true);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 1;
+
+        vm.expectRevert(LottFund.LottFund__BiddingIsPaused.selector);
         vm.prank(_randomUser);
         _lottFund.batchBid(tokenIds);
     }
