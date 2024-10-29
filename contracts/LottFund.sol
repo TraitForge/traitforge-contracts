@@ -75,7 +75,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     error LottFund__BiddingNotFinished();
     error LottFund__TokenBidAmountDepleted();
     error LottFund__TokenCannotBeBidded();
-    error LottFund__AddressHasBiddedTooManyTimes();
+    error LottFund__AddressHasBiddedTooManyTimes(address caller);
 
     constructor(
         address addressProvider,
@@ -121,6 +121,9 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function bid(uint256 tokenId) public whenNotPaused nonReentrant {
+        if (bidCountPerRound[currentRound][msg.sender] >= maxBidsPerAddress) {
+            revert LottFund__AddressHasBiddedTooManyTimes(msg.sender);
+        }
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert LottFund__CallerNotTokenOwner();
         if (
@@ -150,7 +153,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             uint256 tokenId = tokenIds[i];
 
             if (bidCountPerRound[currentRound][sender] >= maxBidsPerAddress) {
-                revert LottFund__AddressHasBiddedTooManyTimes();
+                revert LottFund__AddressHasBiddedTooManyTimes(sender);
             }
             if (traitForgeNft.ownerOf(tokenId) != sender) {
                 revert LottFund__CallerNotTokenOwner();
@@ -163,7 +166,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             ) {
                 revert LottFund__ContractNotApproved();
             }
-            canTokenBeBidded(tokenId);
+            if (!canTokenBeBidded(tokenId)) revert LottFund__TokenCannotBeBidded();
             bidCountPerRound[currentRound][sender]++;
             bidsAmount++;
             tokenIdsBidded.push(tokenId);
@@ -355,7 +358,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             revert LottFund__BiddingNotFinished();
         }
         requestRandomWords(nativePayment);
-     //   uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
+        //   uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
         for (uint256 i = 1; i <= quantityToWin; i++) {
             // A for loop incase we want to add multiple winners later
             uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds

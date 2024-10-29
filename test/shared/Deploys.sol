@@ -31,6 +31,8 @@ contract Deploys is Test {
     mapping(uint256 tokenId => bool) isTokenNoPotentialForger;
     mapping(uint256 tokenId => bool) isTokenNoPotentialMerger;
     mapping(uint256 tokenId => bool) isEMPToken;
+    mapping(uint256 tokenId => bool) isMaxBidPotentialZero;
+    mapping(uint256 tokenId => bool) isMaxBidPotentialNotZero;
 
     AddressProvider internal _addressProvider;
     Airdrop internal _airdrop;
@@ -182,6 +184,11 @@ contract Deploys is Test {
             if (_traitForgeNft.getTokenEntropy(tokenId) % 10 == 7) {
                 isEMPToken[tokenId] = true;
             }
+            if (_lottFund.getMaxBidPotential(tokenId) == 0) {
+                isMaxBidPotentialZero[tokenId] = true;
+            } else {
+                isMaxBidPotentialNotZero[tokenId] = true;
+            }
             vm.stopPrank();
         }
     }
@@ -238,6 +245,46 @@ contract Deploys is Test {
         uint256 count = 0;
         for (uint256 i = startIndex; i < endIndex; i++) {
             if (isEMPToken[i + 1]) {
+                count++;
+                if (count == n) {
+                    theNthTokenId = i + 1;
+                }
+            }
+        }
+    }
+
+    function _getTheNthMaxBidPotentialIsZeroId(
+        uint256 startIndex,
+        uint256 endIndex,
+        uint256 n
+    )
+        internal
+        view
+        returns (uint256 theNthTokenId)
+    {
+        uint256 count = 0;
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            if (isMaxBidPotentialZero[i + 1]) {
+                count++;
+                if (count == n) {
+                    theNthTokenId = i + 1;
+                }
+            }
+        }
+    }
+
+    function _getTheNthMaxBidPotentialNotZeroId(
+        uint256 startIndex,
+        uint256 endIndex,
+        uint256 n
+    )
+        internal
+        view
+        returns (uint256 theNthTokenId)
+    {
+        uint256 count = 0;
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            if (isMaxBidPotentialNotZero[i + 1]) {
                 count++;
                 if (count == n) {
                     theNthTokenId = i + 1;
