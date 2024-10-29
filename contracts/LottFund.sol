@@ -54,7 +54,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     uint256[] public tokenIdsBidded;
 
     bytes32 public keyHash = 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
-    uint32 public callbackGasLimit = 100_000;
+    uint32 public callbackGasLimit = 10_000_000;
 
     uint16 public requestConfirmations = 3; // The default is 3, but you can set this higher.
 
@@ -357,7 +357,6 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             //if bidsAmount has no maxxed out then revert
             revert LottFund__BiddingNotFinished();
         }
-        requestRandomWords(nativePayment);
         //   uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
         for (uint256 i = 1; i <= quantityToWin; i++) {
             // A for loop incase we want to add multiple winners later
