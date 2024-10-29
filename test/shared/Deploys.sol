@@ -163,6 +163,7 @@ contract Deploys is Test {
 
     function _mintTraitForgeNft(address _user, uint256 _amount) internal {
         _skipWhitelistTime();
+        vm.deal(_user, _amount * 1e18);
         bytes32[] memory proofs = new bytes32[](0);
         for (uint256 i = 0; i < _amount; i++) {
             uint256 price = _traitForgeNft.calculateMintPrice();
