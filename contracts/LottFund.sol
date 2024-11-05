@@ -30,6 +30,9 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     uint256[] public requestIds;
     uint256 public lastRequestId;
 
+    uint16 public constant MAX_REQUEST_CONFIRMATIONS = 200;
+    uint32 public constant MAX_NUM_WORDS = 500;
+
     address public ethCollector; // fallback address for devrev
     address public nukeFundAddress;
     uint256 public constant MAX_DENOMINATOR = 100_000;
@@ -95,7 +98,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     // Fallback function to receive ETH and update fund balance
-    receive() external payable {
+    receive() whenNotPaused external payable {                          // FIXED
         uint256 devShare = (msg.value * taxCut) / BPS; // Calculate developer's share (10%)
         uint256 remainingFund = msg.value - devShare; // Calculate remaining funds to add to the fund
 
@@ -111,6 +114,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
         } else if (!airdropContract.daoFundAllowed()) {
             (bool success,) = payable(ethCollector).call{ value: devShare }("");
             require(success, "ETH send failed");
+            emit DaoShareDistributed(devShare);                       // FIXED
         } else {
             (bool success,) = daoAddress.call{ value: devShare }("");
             require(success, "ETH send failed");
@@ -143,6 +147,9 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function batchBid(uint256[] memory tokenIds) public whenNotPaused nonReentrant {
+        if (tokenIds.length == 0) {
+            revert("No tokens available");                      // FIXED
+        }
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         address sender = msg.sender;
 
@@ -168,16 +175,17 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             bidsAmount++;
             tokenIdsBidded.push(tokenId);
             tokenBidCount[tokenId]++;
-        }
 
-        if (bidsAmount >= maxBidAmount) {
+            if (bidsAmount >= maxBidAmount) {            // FIXED
             pauseBiddingBriefly();
             // We should request random words here
             requestRandomWords(nativePayment);
         }
+        }
     }
 
-    function migrate(address newAddress) external whenNotPaused onlyProtocolMaintainer {
+    function migrate(address newAddress) external onlyProtocolMaintainer {
+        require(pausedBids, "bidding is not paused");                        // FIXED
         require(newAddress != address(0), "Invalid new contract address");
         uint256 contractBalance = address(this).balance;
         if (contractBalance > 0) {
@@ -249,6 +257,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function setMaxModulusForToken(uint256 _number) external onlyProtocolMaintainer {
+        require(_number != 0, "cannot be 0");                           // FIXED
         maxModulusForToken = _number;
     }
 

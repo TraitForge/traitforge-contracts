@@ -10,6 +10,7 @@ interface ILottFund {
     event PayedOut(uint256 tokenId, uint256 claimAmount);
     event TokensBurnt(uint256[] tokenIds);
     event DevShareDistributed(uint256 amount);
+    event DaoShareDistributed(uint256 amount);
 
     // External Functions
     function bid(uint256 tokenId) external;
