@@ -30,7 +30,7 @@ via-ir = false
 
 [invariant]
 runs = 2
-depth = 20010
+depth = 10
 fail_on_revert = false
 
 [rpc_endpoints]

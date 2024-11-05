@@ -17,7 +17,7 @@ import { TraitForgeNft } from "contracts/TraitForgeNft.sol";
 import { Roles } from "contracts/libraries/Roles.sol";
 import { NukeRouter } from "contracts/NukeRouter.sol";
 import { LottFund } from "contracts/LottFund.sol";
-import { VRFCoordinatorV2Mock } from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
+import { VRFCoordinatorV2_5Mock } from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract Deploys is Test {
     address internal _defaultAdmin = makeAddr("defaultAdmin");
@@ -31,6 +31,8 @@ contract Deploys is Test {
     mapping(uint256 tokenId => bool) isTokenNoPotentialForger;
     mapping(uint256 tokenId => bool) isTokenNoPotentialMerger;
     mapping(uint256 tokenId => bool) isEMPToken;
+    mapping(uint256 tokenId => bool) isMaxBidPotentialZero;
+    mapping(uint256 tokenId => bool) isMaxBidPotentialNotZero;
 
     AddressProvider internal _addressProvider;
     Airdrop internal _airdrop;
@@ -45,7 +47,7 @@ contract Deploys is Test {
     Trait internal _trait;
     TraitForgeNft internal _traitForgeNft;
     AccessController internal _accessController;
-    VRFCoordinatorV2Mock internal _vrfCoordinator;
+    VRFCoordinatorV2_5Mock internal _vrfCoordinator;
 
     function setUp() public virtual {
         _deployAddressProvider();
@@ -117,15 +119,16 @@ contract Deploys is Test {
         _nukeFund = new NukeFund(address(_addressProvider), ethCollector);
         deal(_protocolMaintainer, 1 ether);
         vm.startPrank(_protocolMaintainer);
-        VRFCoordinatorV2Mock vrfCoordinator = (new VRFCoordinatorV2Mock(0.00001 ether, 0));
-        uint64 subId = vrfCoordinator.createSubscription();
-        vrfCoordinator.fundSubscription(subId, 1 ether);
+        _vrfCoordinator = (new VRFCoordinatorV2_5Mock(0, 0, 0));
+        uint256 subId = _vrfCoordinator.createSubscription();
+        _vrfCoordinator.fundSubscription(subId, 1 ether);
         _lottFund = (
             new LottFund(
-                address(_addressProvider), ethCollector, address(_nukeFund), uint256(subId), address(vrfCoordinator)
+                address(_addressProvider), ethCollector, address(_nukeFund), uint256(subId), address(_vrfCoordinator)
             )
         );
-        vrfCoordinator.addConsumer(subId, address(_lottFund));
+        // vm.deal(address(_lottFund), 100 ether);
+        _vrfCoordinator.addConsumer(subId, address(_lottFund));
         _nukeRouter = new NukeRouter(address(_addressProvider), address(_nukeFund), address(_lottFund));
         _addressProvider.setNukeFund(address(_nukeRouter));
         vm.stopPrank();
@@ -161,6 +164,7 @@ contract Deploys is Test {
 
     function _mintTraitForgeNft(address _user, uint256 _amount) internal {
         _skipWhitelistTime();
+        vm.deal(_user, _amount * 1e18);
         bytes32[] memory proofs = new bytes32[](0);
         for (uint256 i = 0; i < _amount; i++) {
             uint256 price = _traitForgeNft.calculateMintPrice();
@@ -181,6 +185,11 @@ contract Deploys is Test {
             }
             if (_traitForgeNft.getTokenEntropy(tokenId) % 10 == 7) {
                 isEMPToken[tokenId] = true;
+            }
+            if (_lottFund.getMaxBidPotential(tokenId) == 0) {
+                isMaxBidPotentialZero[tokenId] = true;
+            } else {
+                isMaxBidPotentialNotZero[tokenId] = true;
             }
             vm.stopPrank();
         }
@@ -238,6 +247,46 @@ contract Deploys is Test {
         uint256 count = 0;
         for (uint256 i = startIndex; i < endIndex; i++) {
             if (isEMPToken[i + 1]) {
+                count++;
+                if (count == n) {
+                    theNthTokenId = i + 1;
+                }
+            }
+        }
+    }
+
+    function _getTheNthMaxBidPotentialIsZeroId(
+        uint256 startIndex,
+        uint256 endIndex,
+        uint256 n
+    )
+        internal
+        view
+        returns (uint256 theNthTokenId)
+    {
+        uint256 count = 0;
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            if (isMaxBidPotentialZero[i + 1]) {
+                count++;
+                if (count == n) {
+                    theNthTokenId = i + 1;
+                }
+            }
+        }
+    }
+
+    function _getTheNthMaxBidPotentialNotZeroId(
+        uint256 startIndex,
+        uint256 endIndex,
+        uint256 n
+    )
+        internal
+        view
+        returns (uint256 theNthTokenId)
+    {
+        uint256 count = 0;
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            if (isMaxBidPotentialNotZero[i + 1]) {
                 count++;
                 if (count == n) {
                     theNthTokenId = i + 1;

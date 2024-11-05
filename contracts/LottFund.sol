@@ -57,7 +57,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     uint256[] public tokenIdsBidded;
 
     bytes32 public keyHash = 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
-    uint32 public callbackGasLimit = 100_000;
+    uint32 public callbackGasLimit = 10_000_000;
 
     uint16 public requestConfirmations = 3; // The default is 3, but you can set this higher.
 
@@ -78,7 +78,8 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     error LottFund__BiddingNotFinished();
     error LottFund__TokenBidAmountDepleted();
     error LottFund__TokenCannotBeBidded();
-    error LottFund__AddressHasBiddedTooManyTimes();
+    error LottFund__AddressHasBiddedTooManyTimes(address caller);
+    error LottFund__BiddingIsPaused();
 
     constructor(
         address addressProvider,
@@ -125,6 +126,10 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function bid(uint256 tokenId) public whenNotPaused nonReentrant {
+        if (pausedBids) revert LottFund__BiddingIsPaused();
+        if (bidCountPerRound[currentRound][msg.sender] >= maxBidsPerAddress) {
+            revert LottFund__AddressHasBiddedTooManyTimes(msg.sender);
+        }
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         if (traitForgeNft.ownerOf(tokenId) != msg.sender) revert LottFund__CallerNotTokenOwner();
         if (
@@ -150,6 +155,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
         if (tokenIds.length == 0) {
             revert("No tokens available");                      // FIXED
         }
+        if (pausedBids) revert LottFund__BiddingIsPaused();
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         address sender = msg.sender;
 
@@ -157,7 +163,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             uint256 tokenId = tokenIds[i];
 
             if (bidCountPerRound[currentRound][sender] >= maxBidsPerAddress) {
-                revert LottFund__AddressHasBiddedTooManyTimes();
+                revert LottFund__AddressHasBiddedTooManyTimes(sender);
             }
             if (traitForgeNft.ownerOf(tokenId) != sender) {
                 revert LottFund__CallerNotTokenOwner();
@@ -170,7 +176,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             ) {
                 revert LottFund__ContractNotApproved();
             }
-            canTokenBeBidded(tokenId);
+            if (!canTokenBeBidded(tokenId)) revert LottFund__TokenCannotBeBidded();
             bidCountPerRound[currentRound][sender]++;
             bidsAmount++;
             tokenIdsBidded.push(tokenId);
@@ -363,8 +369,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             //if bidsAmount has no maxxed out then revert
             revert LottFund__BiddingNotFinished();
         }
-        requestRandomWords(nativePayment);
-     //   uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
+        //   uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
         for (uint256 i = 1; i <= quantityToWin; i++) {
             // A for loop incase we want to add multiple winners later
             uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds
