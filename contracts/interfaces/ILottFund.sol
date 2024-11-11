@@ -29,13 +29,12 @@ interface ILottFund {
     function setNukeFactorMaxParam(uint256 _nukeFactorMaxParam) external;
     function setEthCollector(address _ethCollector) external;
     function setNativePayment(bool isTrue) external;
-    function setAmountToBeBurnt(uint256 _amountToBeBurnt) external;
+    function setNumWordsAndAmountToBeBurnt(uint32 _numWords, uint256 _quantityToBeBurnt) external;
     function setPausedBids(bool _pausedBids) external;
     function setMaxBidAmount(uint256 _maxBidAmount) external;
     function pause() external;
     function unpause() external;
     function setRequestConfirmations(uint16 _amount) external;
-    function setNumWords(uint32 _amount) external;
     function setKeyHash(bytes32 _keyHash) external;
     function setCallbackGasLimit(uint32 _limit) external;
 }

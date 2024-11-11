@@ -99,7 +99,8 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     // Fallback function to receive ETH and update fund balance
-    receive() whenNotPaused external payable {                          // FIXED
+    receive() external payable whenNotPaused {
+        // FIXED
         uint256 devShare = (msg.value * taxCut) / BPS; // Calculate developer's share (10%)
         uint256 remainingFund = msg.value - devShare; // Calculate remaining funds to add to the fund
 
@@ -115,7 +116,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
         } else if (!airdropContract.daoFundAllowed()) {
             (bool success,) = payable(ethCollector).call{ value: devShare }("");
             require(success, "ETH send failed");
-            emit DaoShareDistributed(devShare);                       // FIXED
+            emit DaoShareDistributed(devShare); // FIXED
         } else {
             (bool success,) = daoAddress.call{ value: devShare }("");
             require(success, "ETH send failed");
@@ -153,7 +154,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
 
     function batchBid(uint256[] memory tokenIds) public whenNotPaused nonReentrant {
         if (tokenIds.length == 0) {
-            revert("No tokens available");                      // FIXED
+            revert("No tokens available"); // FIXED
         }
         if (pausedBids) revert LottFund__BiddingIsPaused();
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
@@ -182,16 +183,18 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             tokenIdsBidded.push(tokenId);
             tokenBidCount[tokenId]++;
 
-            if (bidsAmount >= maxBidAmount) {            // FIXED
-            pauseBiddingBriefly();
-            // We should request random words here
-            requestRandomWords(nativePayment);
-        }
+            if (bidsAmount >= maxBidAmount) {
+                // FIXED
+                pauseBiddingBriefly();
+                // We should request random words here
+                requestRandomWords(nativePayment);
+            }
         }
     }
 
-    function migrate(address newAddress) external onlyProtocolMaintainer {
-        require(pausedBids, "bidding is not paused");                        // FIXED
+    // MITIGATE #6: add whenNotPaused modifier
+    function migrate(address newAddress) external whenNotPaused onlyProtocolMaintainer {
+        // require(pausedBids, "bidding is not paused"); // MITIGATE #6
         require(newAddress != address(0), "Invalid new contract address");
         uint256 contractBalance = address(this).balance;
         if (contractBalance > 0) {
@@ -201,15 +204,8 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function canTokenBeBidded(uint256 tokenId) public view returns (bool) {
-        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        uint256 entropy = traitForgeNft.getTokenEntropy(tokenId); // get entities 6 digit entropy
-            // 999999 =
-        if (entropy == 999_999) {
-            // if golden god (999999) maxBidPotential is +1 over max
-            return true;
-        }
-
-        uint256 tokensMaxBidPotential = entropy % maxModulusForToken; // calculation for maxBidPotenital from entropy eg
+        // MITIGATE #5
+        uint256 tokensMaxBidPotential = getMaxBidPotential(tokenId); // calculation for maxBidPotenital from entropy eg
         if (tokensMaxBidPotential == 0) {
             // if tokens maxBidePotential is 0 revert
             return false;
@@ -236,10 +232,6 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
         requestConfirmations = _amount;
     }
 
-    function setNumWords(uint32 _amount) external onlyProtocolMaintainer {
-        numWords = _amount;
-    }
-
     function setKeyHash(bytes32 _keyHash) external onlyProtocolMaintainer {
         keyHash = _keyHash;
     }
@@ -263,7 +255,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function setMaxModulusForToken(uint256 _number) external onlyProtocolMaintainer {
-        require(_number != 0, "cannot be 0");                           // FIXED
+        require(_number != 0, "cannot be 0"); // FIXED
         maxModulusForToken = _number;
     }
 
@@ -285,8 +277,17 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
         nativePayment = isTrue;
     }
 
-    function setAmountToBeBurnt(uint256 _amountToBeBurnt) external onlyProtocolMaintainer {
-        quantityToBeBurnt = _amountToBeBurnt;
+    // MITIGATE #3: Add a function to set the number of words and the amount to be burnt
+    function setNumWordsAndAmountToBeBurnt(
+        uint32 _numWords,
+        uint256 _quantityToBeBurnt
+    )
+        external
+        onlyProtocolMaintainer
+    {
+        require(_numWords >= _quantityToBeBurnt + 1, "numWords must be greater or equal than quantityToBeBurnt + 1");
+        quantityToBeBurnt = _quantityToBeBurnt;
+        numWords = _numWords;
     }
 
     function setAmountToWin(uint256 _amountToWin) external onlyProtocolMaintainer {
@@ -325,7 +326,9 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         uint256 entropy = traitForgeNft.getTokenEntropy(tokenId);
         uint256 tokenMaxBidPotential = entropy % maxModulusForToken;
-        return tokenMaxBidPotential;
+
+        // MITIGATE #4: If the entropy is 999999, return tokenMaxBidPotential + 1
+        return entropy == 999_999 ? tokenMaxBidPotential + 1 : tokenMaxBidPotential;
     }
 
     function getTokensBidded() public view returns (uint256[] memory) {
@@ -369,7 +372,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             //if bidsAmount has no maxxed out then revert
             revert LottFund__BiddingNotFinished();
         }
-        //   uint256[] memory tokensToWin = new uint256[](quantityToWin); //memory to stre the tokens to be burnt
+
         for (uint256 i = 1; i <= quantityToWin; i++) {
             // A for loop incase we want to add multiple winners later
             uint256 winnerIndex = _randomWords[0] % tokenIdsBidded.length; // get the index of the array of tokenIds
@@ -393,6 +396,12 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             (bool success,) = payable(ownerOfWinningToken).call{ value: claimAmount }("");
             require(success, "Failed to send Ether");
             emit PayedOut(winnerTokenId, claimAmount); // Emit the event with the actual claim amount
+
+            // MITIGATE #2: Remove the winner's token ID from the array of tokenIds bidded
+            // remove the winner's token ID from the array of tokenIds bidded
+            // replace winnerTokenId with the last element in the array and then remove the last element
+            tokenIdsBidded[winnerIndex] = tokenIdsBidded[tokenIdsBidded.length - 1];
+            tokenIdsBidded.pop();
         }
 
         uint256[] memory tokensToBurn = new uint256[](quantityToBeBurnt); //memory to stre the tokens to be burnt
@@ -411,7 +420,10 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     function burnTokens(uint256[] memory tokenIds) internal whenNotPaused {
         ITraitForgeNft traitForgeNft = _getTraitForgeNft();
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            traitForgeNft.burn(tokenIds[i]); // Burn each token
+            // MITIGATE #2: Check if the token ID is owned by an address before burning in case we have same token ID
+            if (traitForgeNft.ownerOf(tokenIds[i]) != address(0)) {
+                traitForgeNft.burn(tokenIds[i]); // Burn each token
+            }
         }
     }
 
