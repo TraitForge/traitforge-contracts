@@ -53,11 +53,12 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     mapping(uint256 tokenId => uint256 bids) public tokenBidCount;
     mapping(uint256 => RequestStatus) public s_requests;
     mapping(uint256 => mapping(address => uint256)) public bidCountPerRound;
+    mapping(address winner => uint256 claimAmount) public winnerClaimAmount;
 
     uint256[] public tokenIdsBidded;
 
     bytes32 public keyHash = 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
-    uint32 public callbackGasLimit = 10_000_000;
+    uint32 public callbackGasLimit = 2_500_000;
 
     uint16 public requestConfirmations = 3; // The default is 3, but you can set this higher.
 
@@ -188,8 +189,21 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
                 pauseBiddingBriefly();
                 // We should request random words here
                 requestRandomWords(nativePayment);
+                // MITIGATE #7
+                break;
             }
         }
+    }
+
+    // MITIGATE #7 #10: Add a function to claim the winning rewards
+    function claimWinningRewards() public nonReentrant {
+        address payable sender = payable(msg.sender);
+        uint256 claimAmount = winnerClaimAmount[sender];
+        require(claimAmount > 0, "No claim amount available");
+        winnerClaimAmount[sender] = 0;
+        (bool success,) = sender.call{ value: claimAmount }("");
+        require(success, "Failed to send Ether");
+        emit ClaimedOut(sender, claimAmount);
     }
 
     // MITIGATE #6: add whenNotPaused modifier
@@ -237,6 +251,8 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function setCallbackGasLimit(uint32 _limit) external onlyProtocolMaintainer {
+        // MITIGATE #9: Add a check to ensure the gas limit does not exceed the maximum limit
+        require(_limit <= 2_500_000, "Gas limit exceeds maximum limit.");
         callbackGasLimit = _limit;
     }
 
@@ -368,10 +384,10 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
     }
 
     function bidPayout(uint256[] calldata _randomWords) internal whenNotPaused nonReentrant {
-        if (bidsAmount != maxBidAmount) {
-            //if bidsAmount has no maxxed out then revert
-            revert LottFund__BiddingNotFinished();
-        }
+        // if (bidsAmount != maxBidAmount) {
+        //     //if bidsAmount has no maxxed out then revert
+        //     revert LottFund__BiddingNotFinished();
+        // }
 
         for (uint256 i = 1; i <= quantityToWin; i++) {
             // A for loop incase we want to add multiple winners later
@@ -393,9 +409,11 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             fund -= claimAmount; // Deduct the claim amount from the fund
             ITraitForgeNft traitForgeNft = _getTraitForgeNft();
             address payable ownerOfWinningToken = payable(traitForgeNft.ownerOf(winnerTokenId));
-            (bool success,) = payable(ownerOfWinningToken).call{ value: claimAmount }("");
-            require(success, "Failed to send Ether");
-            emit PayedOut(winnerTokenId, claimAmount); // Emit the event with the actual claim amount
+            winnerClaimAmount[ownerOfWinningToken] += claimAmount; // Store the claim amount for the winner
+            // (bool success,) = payable(ownerOfWinningToken).call{ value: claimAmount }("");
+            // require(success, "Failed to send Ether");
+            emit BidWinner(ownerOfWinningToken, winnerTokenId, claimAmount); // Emit the event with the actual claim
+                // amount
 
             // MITIGATE #2: Remove the winner's token ID from the array of tokenIds bidded
             // remove the winner's token ID from the array of tokenIds bidded

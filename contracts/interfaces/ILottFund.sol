@@ -7,7 +7,8 @@ interface ILottFund {
     event RequestFulfilled(uint256 requestId, uint256[] randomWords);
     event FundReceived(address indexed sender, uint256 amount);
     event FundBalanceUpdated(uint256 newBalance);
-    event PayedOut(uint256 tokenId, uint256 claimAmount);
+    event BidWinner(address winner, uint256 tokenId, uint256 claimAmount);
+    event ClaimedOut(address claimer, uint256 claimAmount);
     event TokensBurnt(uint256[] tokenIds);
     event DevShareDistributed(uint256 amount);
     event DaoShareDistributed(uint256 amount);
