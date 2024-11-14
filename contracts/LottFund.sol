@@ -62,7 +62,7 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
 
     uint16 public requestConfirmations = 3; // The default is 3, but you can set this higher.
 
-    uint32 public numWords = 6; // For this example, retrieve 2 random values in one request. // Cannot exceed
+    uint32 public numWords = 1; // For this example, retrieve 2 random values in one request. // Cannot exceed
     // VRFCoordinatorV2_5.MAX_NUM_WORDS.
 
     bool public pausedBids = false;
