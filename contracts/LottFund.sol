@@ -422,28 +422,28 @@ contract LottFund is VRFConsumerBaseV2Plus, ILottFund, AddressProviderResolver, 
             tokenIdsBidded.pop();
         }
 
-        uint256[] memory tokensToBurn = new uint256[](quantityToBeBurnt); //memory to stre the tokens to be burnt
-        for (uint256 i = 1; i <= quantityToBeBurnt; i++) {
-            // Use the next 5 numbers to locate the indexes of 5 tokenIds to burn
-            uint256 burnIndex = _randomWords[i] % tokenIdsBidded.length; // Find the burn index
-            tokensToBurn[i - 1] = tokenIdsBidded[burnIndex]; // Store the token ID to burn
-        }
-        burnTokens(tokensToBurn); // Burn the selected tokenIds
+        // uint256[] memory tokensToBurn = new uint256[](quantityToBeBurnt); //memory to stre the tokens to be burnt
+        // for (uint256 i = 1; i <= quantityToBeBurnt; i++) {
+        //     // Use the next 5 numbers to locate the indexes of 5 tokenIds to burn
+        //     uint256 burnIndex = _randomWords[i] % tokenIdsBidded.length; // Find the burn index
+        //     tokensToBurn[i - 1] = tokenIdsBidded[burnIndex]; // Store the token ID to burn
+        // }
+        // burnTokens(tokensToBurn); // Burn the selected tokenIds
         resetRound();
 
         emit FundBalanceUpdated(fund); // Update the fund balance
-        emit TokensBurnt(tokensToBurn);
+        // emit TokensBurnt(tokensToBurn);
     }
 
-    function burnTokens(uint256[] memory tokenIds) internal whenNotPaused {
-        ITraitForgeNft traitForgeNft = _getTraitForgeNft();
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            // MITIGATE #2: Check if the token ID is owned by an address before burning in case we have same token ID
-            if (traitForgeNft.ownerOf(tokenIds[i]) != address(0)) {
-                traitForgeNft.burn(tokenIds[i]); // Burn each token
-            }
-        }
-    }
+    // function burnTokens(uint256[] memory tokenIds) internal whenNotPaused {
+    //     ITraitForgeNft traitForgeNft = _getTraitForgeNft();
+    //     for (uint256 i = 0; i < tokenIds.length; i++) {
+    //         // MITIGATE #2: Check if the token ID is owned by an address before burning in case we have same token ID
+    //         if (traitForgeNft.ownerOf(tokenIds[i]) != address(0)) {
+    //             traitForgeNft.burn(tokenIds[i]); // Burn each token
+    //         }
+    //     }
+    // }
 
     function resetRound() internal whenNotPaused {
         bidsAmount = 0; //reset count of bids
